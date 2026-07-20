@@ -27,6 +27,23 @@ final class CardStore: ObservableObject {
             self.lastLoadedAt = Date()
         }
     }
+    
+    /// データを強制的に再読み込み（インポート後などに使用）
+    func reloadData() {
+        do {
+            let url = try dataFileURL()
+            if FileManager.default.fileExists(atPath: url.path) {
+                let data = try Data(contentsOf: url)
+                self.cards = try CardXMLCodec.decode(data: data)
+            } else {
+                self.cards = []
+            }
+            self.lastLoadedAt = Date()
+        } catch {
+            // エラーが発生しても既存データを保持
+            print("Failed to reload data: \(error)")
+        }
+    }
 
     func appendCard(sourceText: String, markdown: String, audioFileName: String? = nil) async throws {
         let card = Card(sourceText: sourceText, markdown: markdown, audioFileName: audioFileName)
@@ -69,14 +86,7 @@ final class CardStore: ObservableObject {
     
     /// 音声ディレクトリのURLを取得
     func audioDirectoryURL() throws -> URL {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        return base
-            .appendingPathComponent("EnglishCard", isDirectory: true)
+        return try AppStorage.dataDirectoryURL()
             .appendingPathComponent("audio", isDirectory: true)
     }
     
@@ -108,14 +118,7 @@ final class CardStore: ObservableObject {
     }
 
     func dataFileURL() throws -> URL {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let dir = base.appendingPathComponent("EnglishCard", isDirectory: true)
+        let dir = try AppStorage.dataDirectoryURL()
         return dir.appendingPathComponent("cards.xml", isDirectory: false)
     }
 }
-

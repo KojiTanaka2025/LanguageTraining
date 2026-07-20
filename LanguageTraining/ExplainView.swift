@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftUI
 import AppKit
 import Combine
 
@@ -26,17 +25,17 @@ struct ExplainView: View {
     @State private var hasLoadedOnce = false
 
     var body: some View {
-        HSplitView {
-            // 左パネル：入力エリア
+        VStack(spacing: 0) {
+            // 上部：入力エリア
             VStack(alignment: .leading, spacing: 12) {
-                GroupBox("クリップボード") {
+                GroupBox("Clipboard") {
                     VStack(alignment: .leading, spacing: 8) {
                         TextEditor(text: $clipboardText)
                             .font(.body)
-                            .frame(minHeight: 120)
+                            .frame(minHeight: 72, idealHeight: 96, maxHeight: 120)
 
                         HStack {
-                            Button("クリップボードから読み込んで解説") {
+                            Button("Load Clipboard and Explain") {
                                 Task {
                                     await loadAndExplain()
                                 }
@@ -63,7 +62,7 @@ struct ExplainView: View {
                                 isLoadingAudio ||
                                 (audioPlayer.isPlaying && audioPlayer.currentText == clipboardText)
                             )
-                            .help("英文の発音を聞く")
+                            .help("Listen to the pasted text")
 
                             Spacer()
                         }
@@ -86,13 +85,13 @@ struct ExplainView: View {
                         // デバッグ情報
                         if let debugURL = constructedAPIURL {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("デバッグ情報:")
+                                Text("Debug Info:")
                                     .font(.caption)
                                     .bold()
                                 Text("Base URL: \(settings.openAIBaseURL)")
                                     .font(.caption)
                                     .textSelection(.enabled)
-                                Text("構築されたURL: \(debugURL)")
+                                Text("Resolved URL: \(debugURL)")
                                     .font(.caption)
                                     .textSelection(.enabled)
                             }
@@ -106,21 +105,38 @@ struct ExplainView: View {
                     }
                 }
 
+                if let audioErrorMessage {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text(audioErrorMessage)
+                            .foregroundStyle(.secondary)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                    }
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.orange.opacity(0.12))
+                    )
+                }
+
                 if didSave {
-                    Text("保存しました（一覧に追加済み）")
+                    Text("Saved to your library.")
                         .foregroundStyle(.secondary)
                         .font(.callout)
                 }
 
-                Spacer()
             }
             .padding(16)
-            .frame(minWidth: 360, idealWidth: 420)
-            
-            // 右パネル：解説表示エリア
+            .frame(maxWidth: .infinity)
+
+            Divider()
+
+            // 下部：解説表示エリア
             VStack(spacing: 0) {
                 HStack(alignment: .center) {
-                    Text("解説（Markdown）")
+                    Text("Explanation")
                         .font(.headline)
                     Spacer()
                     
@@ -128,18 +144,18 @@ struct ExplainView: View {
                     Toggle(isOn: $saveAudioWithCard) {
                         HStack(spacing: 4) {
                             Image(systemName: saveAudioWithCard ? "speaker.wave.2.fill" : "speaker.slash")
-                            Text("音声も保存")
+                            Text("Save audio")
                                 .font(.caption)
                         }
                     }
                     .toggleStyle(.checkbox)
-                    .help("カード保存時に音声データも一緒に保存します")
+                    .help("Save audio with this card")
                     
                     if isLoading {
                         ProgressView()
                             .controlSize(.small)
                     }
-                    Button("保存して一覧へ") {
+                    Button("Save to Library") {
                         Task { await saveCard() }
                     }
                     .disabled(markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
@@ -153,10 +169,10 @@ struct ExplainView: View {
                         Image(systemName: "doc.text.magnifyingglass")
                             .font(.system(size: 42))
                             .foregroundStyle(.secondary)
-                        Text("まだ解説がありません")
+                        Text("No explanation yet")
                             .font(.title3)
                             .bold()
-                        Text("左でクリップボードを読み込み、AIで解説を取得してください。")
+                        Text("Load text in any language, including Vietnamese, and generate an AI explanation.")
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: 420)
@@ -169,7 +185,7 @@ struct ExplainView: View {
                         .background(Color(nsColor: .textBackgroundColor))
                 }
             }
-            .frame(minWidth: 480)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear {
             // 初回のみクリップボードを読み込む（API呼び出しはしない）
@@ -214,7 +230,7 @@ struct ExplainView: View {
         
         // APIキーチェック
         guard !settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorMessage = "APIキーが未設定です。「設定…」から入力してください。"
+            errorMessage = "API key is not set. Open Settings and enter your API key."
             return
         }
         
@@ -247,14 +263,14 @@ struct ExplainView: View {
         do {
             return try await client().textToSpeech(
                 text: text,
-                voice: "onyx",
+                voice: OpenAIClient.defaultTTSVoice,
                 speed: 0.9
             )
         } catch let error as OpenAIError {
             audioErrorMessage = error.errorDescription
             return nil
         } catch {
-            audioErrorMessage = "音声の取得に失敗しました: \(error.localizedDescription)"
+            audioErrorMessage = "Failed to generate audio: \(error.localizedDescription)"
             return nil
         }
     }
@@ -262,7 +278,10 @@ struct ExplainView: View {
     /// 解説を取得（エラーは内部でハンドリング）
     private func fetchExplanationText(text: String) async -> String? {
         do {
-            return try await client().explainEnglish(text: text)
+            return try await client().explainEnglish(
+                text: text,
+                explanationLanguage: settings.explanationLanguage
+            )
         } catch {
             errorMessage = error.localizedDescription
             return nil
@@ -302,7 +321,7 @@ struct ExplainView: View {
                 } else {
                     audioURL = try await client().textToSpeech(
                         text: source,
-                        voice: "onyx",
+                        voice: OpenAIClient.defaultTTSVoice,
                         speed: 0.9
                     )
                 }
@@ -372,7 +391,7 @@ struct ExplainView: View {
                 // 音声ファイルを取得
                 let audioURL = try await client().textToSpeech(
                     text: text,
-                    voice: "onyx",
+                    voice: OpenAIClient.defaultTTSVoice,
                     speed: 0.9
                 )
                 
@@ -385,7 +404,7 @@ struct ExplainView: View {
             } catch let error as OpenAIError {
                 audioErrorMessage = error.errorDescription
             } catch {
-                audioErrorMessage = "音声の取得に失敗しました: \(error.localizedDescription)"
+            audioErrorMessage = "Failed to generate audio: \(error.localizedDescription)"
             }
             
             isLoadingAudio = false

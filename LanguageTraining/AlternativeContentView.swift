@@ -1,6 +1,4 @@
 import SwiftUI
-
-import SwiftUI
 import Combine
 
 /// サイドバーを使った3ペインレイアウトの拡張版
@@ -12,8 +10,8 @@ struct AlternativeContentView: View {
     @State private var selectedTab: SidebarItem = .explain
     
     enum SidebarItem: String, CaseIterable, Identifiable {
-        case explain = "英語解説"
-        case library = "学習カード一覧"
+        case explain = "Explain"
+        case library = "Library"
         
         var id: String { rawValue }
         
@@ -35,7 +33,7 @@ struct AlternativeContentView: View {
             .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 300)
             .toolbar {
                 ToolbarItem(placement: .navigation) {
-                    Text("EnglishCard")
+                    Text("LanguageTraining")
                         .font(.headline)
                 }
             }

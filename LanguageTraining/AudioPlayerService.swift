@@ -1,5 +1,4 @@
 import Foundation
-import Foundation
 import AVFoundation
 import SwiftUI
 import Combine
@@ -98,7 +97,7 @@ enum AudioPlayerError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .playbackFailed:
-            return "音声の再生に失敗しました。"
+            return "Audio playback failed."
         }
     }
 }
