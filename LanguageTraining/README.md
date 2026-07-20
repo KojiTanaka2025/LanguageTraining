@@ -1,165 +1,118 @@
-# EnglishCard
+# LanguageTraining App Notes
 
-Mac用の英語学習支援アプリケーションです。クリップボードから英単語や英文をコピーし、AIで詳しい解説を取得し、**ネイティブ音声付き**で学習カードとして保存できます。
+LanguageTraining is a macOS language-learning app built with SwiftUI. It turns copied words, phrases, or sentences into saved learning cards with AI-generated explanations and pronunciation audio.
 
-## 主な機能
+This app was originally named EnglishCard. Some legacy names remain in code and data migration paths so existing users can keep their saved cards and Keychain settings.
 
-### 🌟 英語解説モード
-- **クリップボード連携**: ボタン一つで自動的にクリップボードの内容を読み込み
-- **AI解説生成**: OpenAI APIを使って詳しい英語解説をMarkdown形式で取得
-- **🔊 音声生成**: OpenAI TTS APIでネイティブ発音を自動生成
-- **並行処理**: 解説と音声を同時取得で高速化
-- **リアルタイムプレビュー**: 美しくフォーマットされた解説をその場で確認
-- **音声付き保存**: 音声データをカードに保存して何度でも再生可能
-- **簡単保存**: ボタン一つで学習カードとして保存
+## Main Features
 
-### 📚 学習カード一覧モード
-- **検索機能**: 単語や解説内容で素早く検索
-- **🔊 音声アイコン**: 音声データがあるカードを一目で識別
-- **ダブルクリック表示**: カードをダブルクリックで詳細モーダルを表示
-- **発音再生**: 保存済み音声を即座に再生（API不要）
-- **コンテキストメニュー**: 右クリックで詳細表示や削除
-- **日付表示**: 作成日時を確認して学習の進捗を把握
+### Explanation View
 
-## 技術仕様
+- Load text from the clipboard
+- Generate structured Markdown explanations with the OpenAI API
+- Choose the explanation language
+- Generate pronunciation audio with OpenAI text-to-speech
+- Save the source text, explanation, and audio as a learning card
 
-### アーキテクチャ
-- **言語**: Swift
-- **フレームワーク**: SwiftUI (macOS 12.0+)
-- **並行処理**: Swift Concurrency (async/await)
-- **データ永続化**: XML形式でApplication Supportフォルダに保存
-- **セキュリティ**: APIキーはKeychainに安全に保存
+### Library View
 
-### ファイル構造
+- Search saved cards
+- Open card details from the list
+- Replay saved pronunciation audio without calling the API again
+- Delete cards from the context menu
+- Review card creation dates
 
-```
-EnglishCard/
-├── EnglishCardApp.swift          # アプリエントリーポイント
-├── ContentView.swift              # メインビュー（タブ方式）
-├── AlternativeContentView.swift   # 代替レイアウト（サイドバー方式）
-│
-├── Views/
-│   ├── ExplainView.swift          # 英語解説画面
-│   ├── LibraryView.swift          # カード一覧画面
-│   ├── CardDetailView.swift       # カード詳細モーダル
-│   ├── SettingsView.swift         # 設定画面
-│   └── MarkdownTextView.swift     # Markdownレンダリング
-│
-├── Models/
-│   ├── Card.swift                 # カードデータモデル
-│   ├── CardStore.swift            # カード管理（ObservableObject）
-│   └── AppSettings.swift          # アプリ設定（ObservableObject）
-│
-└── Services/
-    ├── OpenAIClient.swift         # OpenAI API通信
-    ├── CardXMLCodec.swift         # XML エンコード/デコード
-    └── Keychain.swift             # Keychain操作ユーティリティ
-```
+### Data Management
 
-## セットアップ
+- Export cards and audio files as a ZIP archive
+- Import exported archives
+- Preserve compatibility with legacy EnglishCard exports
+- Back up existing data before import
 
-### 必要要件
-- macOS 12.0 (Monterey) 以降
-- Xcode 14.0 以降
-- OpenAI APIキー
+## Technical Overview
 
-### 初回起動
-1. アプリを起動
-2. メニューバーから「設定…」を選択（または ⌘,）
-3. OpenAI APIキーを入力
-4. 必要に応じてモデル名やBase URLを変更
-5. 「保存」をクリック
+- Language: Swift
+- UI framework: SwiftUI
+- Concurrency: Swift Concurrency with async/await
+- Storage: XML files and local audio files in Application Support
+- Secrets: OpenAI API keys are stored in macOS Keychain
+- Network: HTTPS-only API requests
+- Security: App Sandbox enabled with outgoing network access and user-selected file access
 
-## 使い方
+## Project Structure
 
-### 英語解説の取得
-
-1. **英語解説**タブを開く
-2. Webブラウザなどで英単語や英文をコピー
-3. 「クリップボードから読み込み」をクリック（または起動時に自動読み込み）
-4. 「AIで解説を取得」をクリック（⌘↩）
-5. 解説が表示されたら「保存して一覧へ」をクリック
-
-### 学習カードの確認
-
-1. **一覧**タブを開く
-2. 検索バーでキーワード検索（任意）
-3. カードをダブルクリックで詳細表示
-4. 右クリックメニューから削除も可能
-
-## カスタマイズ
-
-### レイアウトの変更
-
-デフォルトではタブ形式（`ContentView`）を使用していますが、サイドバー形式（`AlternativeContentView`）に変更することもできます。
-
-`EnglishCardApp.swift`を以下のように変更：
-
-```swift
-WindowGroup("EnglishCard") {
-    AlternativeContentView()  // ContentView() から変更
-        .environmentObject(store)
-        .environmentObject(settings)
-        .frame(minWidth: 980, minHeight: 640)
-}
+```text
+LanguageTraining/
+├── EnglishCardApp.swift
+├── ContentView.swift
+├── AlternativeContentView.swift
+├── ExplainView.swift
+├── LibraryView.swift
+├── CardDetailView.swift
+├── SettingsView.swift
+├── MarkdownTextView.swift
+├── FormattedMarkdownView.swift
+├── Card.swift
+├── CardStore.swift
+├── AppSettings.swift
+├── AppStorage.swift
+├── OpenAIClient.swift
+├── AudioPlayerService.swift
+├── CardXMLCodec.swift
+├── Keychain.swift
+├── LanguageTraining.entitlements
+└── Assets.xcassets
 ```
 
-### OpenAI設定のカスタマイズ
+Top-level helper files:
 
-設定画面で以下を変更可能：
-- **モデル**: `gpt-4o-mini`（デフォルト）、`gpt-4o`、`gpt-3.5-turbo` など
-- **Base URL**: OpenAI互換のAPIエンドポイント（Azure OpenAI等）
-
-## データの保存場所
-
-学習カードは以下の場所に保存されます：
-
-```
-~/Library/Application Support/EnglishCard/cards.xml
+```text
+AppIconGenerator.swift
+DataManager.swift
 ```
 
-### バックアップ
+## Setup
 
-上記のXMLファイルをコピーすることでデータをバックアップできます。
+1. Open `LanguageTraining.xcodeproj` in Xcode.
+2. Select the `LanguageTraining` scheme.
+3. Build and run the app.
+4. Open Settings.
+5. Enter an OpenAI API key.
+6. Keep the Base URL set to `https://api.openai.com` unless you intentionally use a trusted compatible provider.
 
-## トラブルシューティング
+## Data Locations
 
-### APIエラーが発生する
-- APIキーが正しく設定されているか確認
-- インターネット接続を確認
-- OpenAIのAPI利用制限を確認
+Current app data:
 
-### 解説が表示されない
-- クリップボードに有効なテキストがあるか確認
-- APIキーの有効期限を確認
+```text
+~/Library/Application Support/LanguageTraining/
+```
 
-### データが消えた
-- `~/Library/Application Support/EnglishCard/cards.xml`が存在するか確認
-- バックアップから復元
+Legacy data imported from the previous app name:
 
-## ライセンス
+```text
+~/Library/Application Support/EnglishCard/
+```
 
-このアプリケーションはサンプルプロジェクトです。自由に改変・使用してください。
+Backups:
 
-## 今後の拡張案
+```text
+~/Library/Application Support/LanguageTraining_Backups/
+```
 
-- [ ] カードの編集機能
-- [ ] タグやカテゴリー機能
-- [ ] エクスポート機能（PDF、Anki形式など）
-- [ ] 復習リマインダー
-- [ ] 音声読み上げ機能
-- [ ] iCloud同期
-- [ ] iOS/iPadOSアプリ版
+## Security Notes
 
-## 開発者向けメモ
+- Do not commit API keys, exported user data, or local build output.
+- The OpenAI API key is saved in Keychain.
+- Custom API endpoints receive the same API key, so only use endpoints you trust.
+- Imported ZIP archives are validated before replacing local data.
 
-### ビルド設定
-- Deployment Target: macOS 12.0
-- Swift Language Version: Swift 5.9+
+## Future Ideas
 
-### 依存関係
-このプロジェクトは外部ライブラリに依存せず、Appleのネイティブフレームワークのみを使用しています。
+- Card editing
+- Tags or categories
+- Review reminders
+- iCloud sync
+- iOS and iPadOS versions
+- Additional export formats such as Anki
 
----
-
-**EnglishCard** - あなたの英語学習をスマートにサポート 📚✨

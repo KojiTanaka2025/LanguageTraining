@@ -55,9 +55,16 @@ struct SettingsView: View {
                                 .foregroundStyle(.blue)
                                 .textSelection(.enabled)
                         } else {
-                            Text("Invalid URL")
+                            Text("Invalid URL. Use an https URL.")
                                 .font(.caption)
                                 .foregroundStyle(.red)
+                        }
+
+                        if let baseURLWarning {
+                            Text(baseURLWarning)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                                .textSelection(.enabled)
                         }
                     }
                 }
@@ -115,6 +122,10 @@ struct SettingsView: View {
                 Button("Cancel") { dismiss() }
                 Button("Save") {
                     do {
+                        guard constructedURL != nil else {
+                            errorMessage = "Base URL must be a valid https URL."
+                            return
+                        }
                         try settings.save()
                         dismiss()
                     } catch {
@@ -193,11 +204,24 @@ struct SettingsView: View {
     private var constructedURL: String? {
         let trimmed = settings.openAIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let base = URL(string: trimmed) else { return nil }
+        guard base.scheme?.lowercased() == "https" else { return nil }
+        guard base.host?.isEmpty == false else { return nil }
         var urlString = base.absoluteString
         while urlString.hasSuffix("/") {
             urlString.removeLast()
         }
         urlString += "/v1/chat/completions"
         return urlString
+    }
+
+    private var baseURLWarning: String? {
+        let trimmed = settings.openAIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let base = URL(string: trimmed),
+              base.scheme?.lowercased() == "https",
+              let host = base.host?.lowercased(),
+              host != "api.openai.com" else {
+            return nil
+        }
+        return "This custom endpoint will receive your API key. Only use a provider you trust."
     }
 }

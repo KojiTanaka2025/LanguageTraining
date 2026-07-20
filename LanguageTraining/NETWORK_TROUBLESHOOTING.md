@@ -1,186 +1,192 @@
-# ネットワーク接続エラーのトラブルシューティング
+# Network Troubleshooting
 
-「サーバーが見つかりません」エラーが出る場合の解決方法です。
+Use this guide when LanguageTraining cannot connect to the OpenAI API or shows a network-related error.
 
-## 🔧 Xcodeプロジェクト設定の確認
+## Check Xcode Project Settings
 
-### 1. App Sandboxとネットワーク権限
+### App Sandbox And Network Access
 
-Xcodeでプロジェクトを開き、以下を確認してください：
+Open the project in Xcode and check the following:
 
-1. **プロジェクトナビゲーターで、プロジェクト名（EnglishCard）をクリック**
-2. **TARGETSでEnglishCardを選択**
-3. **「Signing & Capabilities」タブを開く**
+1. Select the `LanguageTraining` project in the project navigator.
+2. Select the `LanguageTraining` target.
+3. Open Signing & Capabilities.
+4. Confirm that App Sandbox is enabled.
+5. Confirm that Outgoing Connections (Client) is enabled.
 
-#### App Sandboxが有効な場合：
-- **「+ Capability」ボタンをクリック**
-- **「App Sandbox」を追加（既にあればスキップ）**
-- **「Network」セクションで以下をチェック：**
-  - ✅ **Outgoing Connections (Client)** ← これが重要！
+### Entitlements File
 
-#### entitlementsファイルの設定：
-プロジェクトに `EnglishCard.entitlements` ファイルが追加されているか確認し、以下の内容が含まれているか確認：
+Confirm that `LanguageTraining.entitlements` exists and includes:
 
 ```xml
+<key>com.apple.security.app-sandbox</key>
+<true/>
 <key>com.apple.security.network.client</key>
+<true/>
+<key>com.apple.security.files.user-selected.read-write</key>
 <true/>
 ```
 
-### 2. ビルド設定の確認
+### Build Settings
 
-**Build Settings** タブで以下を確認：
+In Build Settings, confirm:
 
-- **Code Signing Entitlements**: `EnglishCard.entitlements` が設定されているか
+- Code Signing Entitlements: `LanguageTraining/LanguageTraining.entitlements`
+- Enable App Sandbox: `YES`
 
----
+## Connection Test
 
-## 🧪 接続テストの実行
+After rebuilding and launching the app:
 
-アプリを再ビルドして起動後：
+1. Open the Explain tab.
+2. Run the connection test if the UI exposes it.
+3. Review the result.
 
-1. **「英語解説」タブを開く**
-2. **「🔍 接続テスト」ボタンをクリック**
-3. 結果を確認：
-   - ✅ **「サーバーに接続成功！（認証エラーは正常...）」** → 問題なし！APIキーを確認してください
-   - ❌ **エラーメッセージ** → 以下の対処法を試してください
+Expected outcomes:
 
----
+- A successful server connection means networking is working. Check the API key if authentication fails.
+- A DNS, timeout, or sandbox error means the network configuration still needs attention.
 
-## 🔍 よくある問題と解決方法
+## Common Problems
 
-### 問題1: 「DNSでホスト名を解決できません」
+### DNS Cannot Resolve The Host
 
-**原因:** インターネット接続、DNS設定、またはVPNの問題
+Possible causes:
 
-**解決方法:**
-1. **インターネット接続を確認**
-   - Safari等で https://www.google.com にアクセスできるか確認
-   
-2. **DNSキャッシュをクリア**（ターミナルで実行）:
-   ```bash
-   sudo dscacheutil -flushcache
-   sudo killall -HUP mDNSResponder
-   ```
+- No internet connection
+- DNS server issue
+- VPN routing problem
 
-3. **VPNを使用している場合**
-   - VPNを一時的に無効化して再度テスト
-   - VPNの設定でOpenAI APIへのアクセスを許可
+Fixes:
 
-4. **DNSサーバーを変更**
-   - システム環境設定 → ネットワーク → 詳細 → DNS
-   - Google DNS（8.8.8.8, 8.8.4.4）やCloudflare DNS（1.1.1.1）を追加
+1. Open a browser and confirm that normal websites load.
+2. Temporarily disable VPN and test again.
+3. Allow access to the OpenAI API in your VPN or network policy.
+4. Try a different DNS server such as Cloudflare DNS or Google DNS.
+5. Flush the DNS cache:
 
-### 問題2: 「接続がタイムアウトしました」
+```bash
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
+```
 
-**原因:** ファイアウォールやセキュリティソフトウェアがブロックしている
+### Connection Timeout
 
-**解決方法:**
-1. **macOSファイアウォール設定を確認**
-   - システム環境設定 → セキュリティとプライバシー → ファイアウォール
-   - 「ファイアウォールオプション...」をクリック
-   - EnglishCardアプリが許可されているか確認
+Possible causes:
 
-2. **サードパーティのセキュリティソフトを確認**
-   - アンチウイルスソフトやファイアウォールアプリを一時的に無効化してテスト
+- Firewall blocking the app
+- Security software blocking outgoing HTTPS connections
+- Network proxy issue
 
-### 問題3: 「App Transport Securityの制限」
+Fixes:
 
-**原因:** HTTPSの設定に問題がある（通常は発生しません）
+1. Check macOS firewall settings.
+2. Check third-party antivirus or firewall tools.
+3. Test from a different network.
+4. Confirm that `https://api.openai.com` is reachable.
 
-**解決方法:**
-- Base URLが `https://api.openai.com` で始まっているか確認（`http://` ではなく `https://`）
+### App Transport Security Or Invalid URL
 
-### 問題4: App Sandboxが接続をブロックしている
+LanguageTraining requires HTTPS API endpoints.
 
-**原因:** ネットワーク権限が正しく設定されていない
+Use:
 
-**解決方法:**
-1. **Xcodeで再設定:**
-   - Signing & Capabilities → App Sandbox → Outgoing Connections (Client) をチェック
+```text
+https://api.openai.com
+```
 
-2. **プロジェクトをクリーンビルド:**
-   - Xcode: Product → Clean Build Folder (Shift + Command + K)
-   - 再ビルド: Product → Build (Command + B)
+Do not use:
 
-3. **派生データを削除:**（ターミナルで実行）
-   ```bash
-   rm -rf ~/Library/Developer/Xcode/DerivedData
-   ```
+```text
+http://api.openai.com
+```
 
----
+### App Sandbox Blocks Network Access
 
-## 🛠 手動でentitlementsファイルを追加する方法
+Fixes:
 
-もしentitlementsファイルがプロジェクトに含まれていない場合：
+1. Open Signing & Capabilities.
+2. Confirm App Sandbox is enabled.
+3. Confirm Outgoing Connections (Client) is checked.
+4. Clean the build folder with `Shift + Command + K`.
+5. Build again with `Command + B`.
 
-1. **Xcodeでプロジェクトを開く**
-2. **File → New → File...**
-3. **「Property List」を選択**
-4. **ファイル名を `EnglishCard.entitlements` にする**
-5. **以下の内容を追加:**
+If needed, remove DerivedData:
+
+```bash
+rm -rf ~/Library/Developer/Xcode/DerivedData
+```
+
+## Manual Entitlements Setup
+
+If the entitlements file is missing:
+
+1. Open the project in Xcode.
+2. Choose File > New > File.
+3. Select Property List.
+4. Name the file `LanguageTraining.entitlements`.
+5. Add the required sandbox and network keys.
+6. Set Build Settings > Code Signing Entitlements to `LanguageTraining/LanguageTraining.entitlements`.
+
+Recommended content:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
-	<key>com.apple.security.network.client</key>
-	<true/>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.network.server</key>
+    <false/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
 </dict>
 </plist>
 ```
 
-6. **Build Settings → Code Signing Entitlements に `EnglishCard.entitlements` を設定**
+## Checklist
 
----
+- [ ] Internet access works.
+- [ ] The Base URL is `https://api.openai.com` or another trusted HTTPS endpoint.
+- [ ] The OpenAI API key is entered correctly.
+- [ ] App Sandbox is enabled.
+- [ ] Outgoing Connections (Client) is enabled.
+- [ ] `LanguageTraining.entitlements` is configured in Build Settings.
+- [ ] The app has been rebuilt after changing signing settings.
+- [ ] Firewall or security tools are not blocking the app.
 
-## ✅ 最終確認チェックリスト
+## Test With Curl
 
-- [ ] インターネット接続が正常
-- [ ] Xcodeの「Signing & Capabilities」で「Outgoing Connections (Client)」がチェック済み
-- [ ] entitlementsファイルが正しく設定されている
-- [ ] プロジェクトをクリーンビルドした
-- [ ] ファイアウォールがアプリをブロックしていない
-- [ ] Base URLが `https://api.openai.com` （末尾のスラッシュなし）
-- [ ] OpenAI APIキーが正しく入力されている
-- [ ] 接続テストで「✅ サーバーに接続成功！」と表示される
-
----
-
-## 📞 それでも解決しない場合
-
-接続テストの結果（エラーメッセージ全体）をコピーして、以下の情報と一緒に報告してください：
-
-- macOSバージョン
-- Xcodeバージョン
-- VPN使用の有無
-- 接続テストの完全なエラーメッセージ
-- Base URL設定
-- 構築されたURL
-
----
-
-## 🌐 ブラウザでの確認方法
-
-ターミナルで以下のコマンドを実行して、OpenAI APIに到達できるか確認：
+Run this command in Terminal to confirm that the OpenAI API is reachable:
 
 ```bash
 curl -X POST https://api.openai.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
-  -d '{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"test"}]}'
+  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"test"}]}'
 ```
 
-**YOUR_API_KEY** を実際のAPIキーに置き換えて実行してください。
+Replace `YOUR_API_KEY` with a valid API key.
 
-**期待される結果:**
-- エラーが返ってくる（APIキーが無効な場合）または
-- JSON形式のレスポンスが返ってくる（APIキーが有効な場合）
+Expected results:
 
-**「Could not resolve host」エラーが出る場合:**
-- DNS/ネットワークの問題です
+- A JSON response means the API is reachable.
+- A 401 response usually means the key is invalid or expired.
+- A "Could not resolve host" error points to DNS or network issues.
+- A successful curl response but failing app request usually points to sandbox, signing, or app configuration.
 
-**正常にレスポンスが返ってくる場合:**
-- ターミナルからは接続できているので、アプリのSandbox設定の問題です
+## Reporting A Network Issue
+
+Include the following details when reporting a network problem:
+
+- macOS version
+- Xcode version
+- Whether VPN or proxy is enabled
+- Full error message
+- Base URL setting
+- Resolved endpoint shown in Settings
+- Whether curl succeeds
+

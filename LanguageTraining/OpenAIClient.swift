@@ -22,6 +22,9 @@ struct OpenAIClient {
         guard let url = URL(string: urlString) else {
             throw OpenAIError.invalidBaseURL
         }
+        guard url.scheme?.lowercased() == "https" else {
+            throw OpenAIError.invalidBaseURL
+        }
 
         let template = Self.localizedExplanationTemplate(for: explanationLanguage)
         let system = """
@@ -404,6 +407,9 @@ Explain the following text in \(explanationLanguage).
         urlString += "/v1/audio/speech"
         
         guard let url = URL(string: urlString) else {
+            throw OpenAIError.invalidBaseURL
+        }
+        guard url.scheme?.lowercased() == "https" else {
             throw OpenAIError.invalidBaseURL
         }
         
