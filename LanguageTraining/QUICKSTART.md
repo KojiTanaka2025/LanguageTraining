@@ -1,242 +1,141 @@
-# EnglishCard - クイックスタートガイド
+# LanguageTraining Quick Start
 
-## 📱 アプリの起動と初期設定
+This guide explains the basic workflow for setting up LanguageTraining, creating learning cards, and reviewing saved cards.
 
-### 1. 初回起動時の設定
+## First Launch
 
-アプリを初めて起動したら、まずOpenAI APIキーを設定します：
+1. Launch the app.
+2. Open Settings from the app menu or press `Command + ,`.
+3. Enter your OpenAI API key.
+4. Keep the default model unless you need a different one.
+5. Keep the Base URL as `https://api.openai.com` unless you use a trusted OpenAI-compatible provider.
+6. Click Save.
 
-1. メニューバーから**「EnglishCard」→「設定…」**を選択
-   - または、キーボードショートカット **⌘,** を使用
-2. **APIキー**欄にOpenAIのAPIキーを入力
-3. （オプション）モデル名を変更（デフォルト: `gpt-4o-mini`）
-4. **「保存」**ボタンをクリック
+The API key is stored in macOS Keychain.
 
-> 💡 **ヒント**: APIキーは安全にKeychainに保存されます
+## Create A Learning Card
 
----
+Basic flow:
 
-## 🌟 英語解説モードの使い方
-
-### 基本的な流れ
-
-```
-英単語/英文をコピー → クリップボード読み込み → AI解説取得 → 保存
+```text
+Copy text -> Load clipboard -> Generate explanation -> Save card
 ```
 
-### ステップバイステップ
+### 1. Copy Text
 
-#### ステップ1: 英語をコピー
-- Webブラウザ、PDFリーダー、テキストエディタなどで英単語や英文を選択してコピー（⌘C）
+Copy a word, phrase, or sentence from a browser, PDF reader, editor, or another app.
 
-**例:**
-```
+Example:
+
+```text
 procrastinate
 ```
-または
-```
-The company will procrastinate on making a decision until next month.
-```
 
-#### ステップ2: クリップボードから読み込み
-- **「英語解説」**タブを開く
-- **「クリップボードから読み込み」**ボタンをクリック
-  - アプリ起動時や画面表示時は自動的に読み込まれます
+Another example:
 
-#### ステップ3: AI解説を取得
-- **「AIで解説を取得」**ボタンをクリック（またはキーボードショートカット **⌘↩**）
-- 数秒待つと、右側に詳しい解説がMarkdown形式で表示されます
-
-**解説の内容例:**
-- 品詞・意味
-- 語法・コロケーション
-- 例文と和訳
-- 文法解説（英文の場合）
-- 覚えるポイント
-
-#### ステップ4: 学習カードとして保存
-- 解説内容を確認したら、**「保存して一覧へ」**ボタンをクリック
-- 「保存しました（一覧に追加済み）」というメッセージが表示されます
-
----
-
-## 📚 学習カード一覧モードの使い方
-
-### カード一覧の表示
-
-**「一覧」**タブを開くと、保存した学習カードが表示されます。
-
-各カードには以下の情報が表示されます：
-- **元の英文/単語**（太字）
-- **解説の一部**（プレビュー）
-- **作成日時**（右上）
-
-### 検索機能
-
-画面上部の検索バーを使って、カードを素早く絞り込めます：
-
-```
-検索例:
-- "procrastinate" → 単語名で検索
-- "動詞" → 解説内容で検索
-- "先延ばし" → 日本語訳で検索
+```text
+The company will postpone making a decision until next month.
 ```
 
-検索結果の件数がリアルタイムで表示されます。
+### 2. Load From Clipboard
 
-### カードの詳細表示
+1. Open the Explain tab.
+2. Click Load from Clipboard.
 
-カードの詳細を見る方法は2つあります：
+The app may also load clipboard text automatically when the view appears.
 
-#### 方法1: ダブルクリック
-- カードをダブルクリック
-- 詳細モーダルウィンドウが開きます
+### 3. Generate An Explanation
 
-#### 方法2: 右クリックメニュー
-- カードを右クリック
-- **「詳細を表示」**を選択
+1. Click the AI explanation button, or press `Command + Return`.
+2. Wait for the explanation to appear.
 
-### 詳細モーダルの見方
+Generated cards can include:
 
-詳細モーダルでは以下が表示されます：
+- Source language detection
+- Translation
+- Grammar and structure
+- Important vocabulary
+- Example sentences
+- Common pitfalls
+- Key takeaways
+- Pronunciation audio
 
-```
-┌─────────────────────────────────────┐
-│ 学習カード詳細                        │
-│ 作成日時: 2026年3月19日 14:30        │
-├─────────────────────────────────────┤
-│ 📝 元の英文・単語                     │
-│ ┌─────────────────────────────────┐ │
-│ │ procrastinate                   │ │
-│ └─────────────────────────────────┘ │
-│                                     │
-│ ✨ AI解説                            │
-│ ┌─────────────────────────────────┐ │
-│ │ # procrastinate                 │ │
-│ │ ## 基本情報                      │ │
-│ │ - **品詞**: 動詞                 │ │
-│ │ ...                             │ │
-│ └─────────────────────────────────┘ │
-└─────────────────────────────────────┘
-```
+### 4. Save The Card
 
-解説部分はテキスト選択可能なので、コピー＆ペーストできます。
+Review the generated explanation, then save it to the library.
 
-### カードの削除
+Saved cards include the original text, explanation, creation date, and audio when available.
 
-不要なカードを削除する方法：
+## Review Saved Cards
 
-1. カードを右クリック
-2. **「削除」**を選択
-3. カードが一覧から削除されます
+1. Open the Library tab.
+2. Use the search field to filter cards.
+3. Open a card to view the full explanation.
+4. Play saved audio when available.
+5. Delete cards you no longer need from the context menu.
 
-> ⚠️ **注意**: 削除は即座に実行され、取り消しできません
+## Keyboard Shortcuts
 
----
+| Shortcut | Action |
+| --- | --- |
+| `Command + ,` | Open Settings |
+| `Command + Return` | Generate an AI explanation |
+| `Command + W` | Close the window |
+| `Command + Q` | Quit the app |
 
-## ⌨️ キーボードショートカット
+## Data Management
 
-| ショートカット | 機能 |
-|---------------|------|
-| **⌘,** | 設定画面を開く |
-| **⌘↩** | AI解説を取得（英語解説モード） |
-| **⌘W** | ウィンドウを閉じる |
-| **⌘Q** | アプリを終了 |
+Cards are stored here:
 
----
-
-## 💡 便利な使い方のヒント
-
-### 1. ブラウザ拡張機能との連携
-Safari/Chromeで英文を読んでいるときに、わからない単語をコピーしてEnglishCardで即座に解説を取得
-
-### 2. 定期的な復習
-一覧モードで古い日付のカードをクリックして復習
-
-### 3. 検索活用
-特定のトピック（例: "仮定法"）で検索して、関連するカードをまとめて復習
-
-### 4. 長文対応
-英文全体をコピーすれば、文型や構文解説も含めた詳細な解説を取得
-
-### 5. バックアップ
-重要なカードは定期的に以下のファイルをバックアップ：
-```
-~/Library/Application Support/EnglishCard/cards.xml
+```text
+~/Library/Application Support/LanguageTraining/
 ```
 
----
+Legacy data may exist here:
 
-## 🔧 トラブルシューティング
-
-### Q: 「APIキーが未設定です」と表示される
-**A:** 設定画面（⌘,）でOpenAI APIキーを入力してください
-
-### Q: 「APIエラー（401）」が表示される
-**A:** APIキーが無効または期限切れです。OpenAIのダッシュボードで確認してください
-
-### Q: 解説の取得が遅い
-**A:** インターネット接続を確認してください。また、OpenAI APIのサーバー状態も影響します
-
-### Q: カードが表示されない
-**A:** データファイルが破損している可能性があります。以下を確認：
-```
-~/Library/Application Support/EnglishCard/cards.xml
-```
-
-### Q: アプリが起動しない
-**A:** macOS 12.0 (Monterey) 以降が必要です。システムバージョンを確認してください
-
----
-
-## 📊 データについて
-
-### 保存場所
-```
+```text
 ~/Library/Application Support/EnglishCard/
-  └── cards.xml
 ```
 
-### データ形式
-XML形式で以下の情報を保存：
-- カードID（UUID）
-- 作成日時
-- 元の英文/単語
-- AI解説（Markdown）
+Use Settings to export or import learning data. Importing an archive backs up existing data first.
 
-### バックアップ方法
-上記のXMLファイルをコピーして安全な場所に保存
+## Troubleshooting
 
-### 復元方法
-バックアップしたXMLファイルを元の場所に戻す
+### API Key Not Set
 
----
+Open Settings and enter your OpenAI API key.
 
-## 🎓 効果的な学習法
+### Authentication Error
 
-### おすすめの学習フロー
+The API key may be invalid or expired. Check the key in your OpenAI dashboard and update it in Settings.
 
-1. **毎日の積み重ね**: 読書中に見つけた新しい単語をその場でカード化
-2. **週末の復習**: 一覧モードで1週間分のカードを見返す
-3. **検索活用**: 試験前に特定のトピックでカードを絞り込み
-4. **音読練習**: 詳細モーダルで例文を音読して定着度UP
+### Slow Explanation Generation
 
-### カード作成のコツ
+Check your internet connection. OpenAI API availability and model latency can also affect response time.
 
-- **単語だけでなく例文も**: 単語だけでなく、実際の使用例も一緒に保存
-- **文脈を含める**: 出典元の前後の文も一緒にコピーすると理解が深まる
-- **定期的な見直し**: 古いカードも時々見返して記憶を強化
+### Cards Do Not Appear
 
----
+Check whether the data folder exists:
 
-## 🌈 さらに学習を楽しく
+```text
+~/Library/Application Support/LanguageTraining/
+```
 
-- 毎日の目標を決める（例: 5単語/日）
-- カードの数が増えていくのを楽しむ
-- 友達と学習カードをシェア（XMLファイルを共有）
+If you recently renamed from EnglishCard, check the legacy folder as well:
 
----
+```text
+~/Library/Application Support/EnglishCard/
+```
 
-**Happy Learning! 📚✨**
+### App Does Not Connect To The API
 
-EnglishCardで英語学習をもっと効率的に、もっと楽しく！
+Check `NETWORK_TROUBLESHOOTING.md` for network and App Sandbox diagnostics.
+
+## Study Tips
+
+- Save useful words and phrases as soon as you encounter them.
+- Include full example sentences when possible.
+- Review older cards regularly.
+- Search by topic before tests or focused study sessions.
+- Use the audio feature for pronunciation practice.
+

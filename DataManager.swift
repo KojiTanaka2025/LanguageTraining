@@ -136,6 +136,8 @@ struct DataManager {
         guard FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
             throw DataManagerError.noCardsFound
         }
+
+        try validateImportedDataDirectory(resolvedImportedDataDir)
         
         // 既存データのバックアップを作成
         try await backupCurrentData()
@@ -196,6 +198,51 @@ struct DataManager {
         // keepCount以降を削除
         for url in sorted.dropFirst(keepCount) {
             try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    private static func validateImportedDataDirectory(_ directory: URL) throws {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey],
+            options: []
+        ) else {
+            throw DataManagerError.invalidArchive
+        }
+
+        for case let itemURL as URL in enumerator {
+            let values = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+            if values.isSymbolicLink == true {
+                throw DataManagerError.unsafeArchive
+            }
+
+            let relativePath = itemURL.path.replacingOccurrences(of: directory.path + "/", with: "")
+            let filename = itemURL.lastPathComponent
+            if filename == ".DS_Store" || filename.hasPrefix("._") {
+                continue
+            }
+
+            if values.isDirectory == true {
+                guard relativePath == "audio" else {
+                    throw DataManagerError.unsafeArchive
+                }
+                continue
+            }
+
+            guard values.isRegularFile == true else {
+                throw DataManagerError.unsafeArchive
+            }
+
+            if relativePath == "cards.xml" {
+                continue
+            }
+
+            if relativePath.hasPrefix("audio/"),
+               itemURL.pathExtension.lowercased() == "mp3" {
+                continue
+            }
+
+            throw DataManagerError.unsafeArchive
         }
     }
     
@@ -336,6 +383,7 @@ enum DataManagerError: LocalizedError {
     case userCancelled
     case noDataFound
     case invalidArchive
+    case unsafeArchive
     case noCardsFound
     case zipFailed
     case unzipFailed
@@ -348,6 +396,8 @@ enum DataManagerError: LocalizedError {
             return "No data was found to export."
         case .invalidArchive:
             return "The archive file is invalid."
+        case .unsafeArchive:
+            return "The archive contains unsupported or unsafe files."
         case .noCardsFound:
             return "No card data was found in the archive."
         case .zipFailed:
