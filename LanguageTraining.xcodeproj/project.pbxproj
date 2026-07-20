@@ -8,17 +8,21 @@
 
 /* Begin PBXBuildFile section */
 		EB9FB3882F972660000CDBC1 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = EB9FB3872F972660000CDBC1 /* .gitignore */; };
+		EBC32D7D2F972BE6004E7B04 /* AppIconGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC32D7C2F972BE6004E7B04 /* AppIconGenerator.swift */; };
+		EBC32D7F2F973414004E7B04 /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC32D7E2F973414004E7B04 /* DataManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		EB9FB3872F972660000CDBC1 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
-		EBC13B002F6C0A2C00D327AC /* EnglishCard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EnglishCard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EBC13B002F6C0A2C00D327AC /* LanguageTraining.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LanguageTraining.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EBC32D7C2F972BE6004E7B04 /* AppIconGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconGenerator.swift; sourceTree = "<group>"; };
+		EBC32D7E2F973414004E7B04 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		EBC13B022F6C0A2C00D327AC /* EnglishCard */ = {
+		EBC13B022F6C0A2C00D327AC /* LanguageTraining */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = EnglishCard;
+			path = LanguageTraining;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -37,16 +41,18 @@
 		EBC13AF72F6C0A2C00D327AC = {
 			isa = PBXGroup;
 			children = (
-				EBC13B022F6C0A2C00D327AC /* EnglishCard */,
+				EBC13B022F6C0A2C00D327AC /* LanguageTraining */,
 				EBC13B012F6C0A2C00D327AC /* Products */,
 				EB9FB3872F972660000CDBC1 /* .gitignore */,
+				EBC32D7C2F972BE6004E7B04 /* AppIconGenerator.swift */,
+				EBC32D7E2F973414004E7B04 /* DataManager.swift */,
 			);
 			sourceTree = "<group>";
 		};
 		EBC13B012F6C0A2C00D327AC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				EBC13B002F6C0A2C00D327AC /* EnglishCard.app */,
+				EBC13B002F6C0A2C00D327AC /* LanguageTraining.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -54,9 +60,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		EBC13AFF2F6C0A2C00D327AC /* EnglishCard */ = {
+		EBC13AFF2F6C0A2C00D327AC /* LanguageTraining */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = EBC13B0B2F6C0A2D00D327AC /* Build configuration list for PBXNativeTarget "EnglishCard" */;
+			buildConfigurationList = EBC13B0B2F6C0A2D00D327AC /* Build configuration list for PBXNativeTarget "LanguageTraining" */;
 			buildPhases = (
 				EBC13AFC2F6C0A2C00D327AC /* Sources */,
 				EBC13AFD2F6C0A2C00D327AC /* Frameworks */,
@@ -67,13 +73,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				EBC13B022F6C0A2C00D327AC /* EnglishCard */,
+				EBC13B022F6C0A2C00D327AC /* LanguageTraining */,
 			);
-			name = EnglishCard;
+			name = LanguageTraining;
 			packageProductDependencies = (
 			);
-			productName = EnglishCard;
-			productReference = EBC13B002F6C0A2C00D327AC /* EnglishCard.app */;
+			productName = LanguageTraining;
+			productReference = EBC13B002F6C0A2C00D327AC /* LanguageTraining.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -91,7 +97,7 @@
 					};
 				};
 			};
-			buildConfigurationList = EBC13AFB2F6C0A2C00D327AC /* Build configuration list for PBXProject "EnglishCard" */;
+			buildConfigurationList = EBC13AFB2F6C0A2C00D327AC /* Build configuration list for PBXProject "LanguageTraining" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -105,7 +111,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				EBC13AFF2F6C0A2C00D327AC /* EnglishCard */,
+				EBC13AFF2F6C0A2C00D327AC /* LanguageTraining */,
 			);
 		};
 /* End PBXProject section */
@@ -126,6 +132,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EBC32D7F2F973414004E7B04 /* DataManager.swift in Sources */,
+				EBC32D7D2F972BE6004E7B04 /* AppIconGenerator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,7 +273,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = EnglishCard;
+				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -273,7 +281,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.EnglishCard.EnglishCard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.LanguageTraining.LanguageTraining;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -298,7 +306,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = EnglishCard;
+				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -306,7 +314,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.EnglishCard.EnglishCard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.LanguageTraining.LanguageTraining;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -321,7 +329,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		EBC13AFB2F6C0A2C00D327AC /* Build configuration list for PBXProject "EnglishCard" */ = {
+		EBC13AFB2F6C0A2C00D327AC /* Build configuration list for PBXProject "LanguageTraining" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				EBC13B092F6C0A2D00D327AC /* Debug */,
@@ -330,7 +338,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		EBC13B0B2F6C0A2D00D327AC /* Build configuration list for PBXNativeTarget "EnglishCard" */ = {
+		EBC13B0B2F6C0A2D00D327AC /* Build configuration list for PBXNativeTarget "LanguageTraining" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				EBC13B0C2F6C0A2D00D327AC /* Debug */,

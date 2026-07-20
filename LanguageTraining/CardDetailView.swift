@@ -15,10 +15,10 @@ struct CardDetailView: View {
             // ヘッダー
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("学習カード詳細")
+                    Text("Card Details")
                         .font(.title2)
                         .bold()
-                    Text("作成日時: \(card.createdAt.formatted(date: .long, time: .shortened))")
+                    Text("Created: \(card.createdAt.formatted(date: .long, time: .shortened))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -34,7 +34,7 @@ struct CardDetailView: View {
                 // 元の英文
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Label("元の英文・単語", systemImage: "textformat.abc")
+                        Label("Original Text", systemImage: "textformat.abc")
                             .font(.headline)
                             .foregroundStyle(.blue)
                         
@@ -52,7 +52,7 @@ struct CardDetailView: View {
                                 } else {
                                     Image(systemName: card.audioFileName != nil ? "speaker.wave.2.fill" : "speaker.wave.2")
                                 }
-                                Text(card.audioFileName != nil ? "発音を聞く（保存済み）" : "発音を聞く")
+                                Text(card.audioFileName != nil ? "Play Saved Audio" : "Play Audio")
                                     .font(.caption)
                             }
                         }
@@ -93,7 +93,7 @@ struct CardDetailView: View {
                 
                 // Markdown解説
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("AI解説", systemImage: "sparkles")
+                    Label("AI Explanation", systemImage: "sparkles")
                         .font(.headline)
                         .foregroundStyle(.purple)
                         .padding(.horizontal, 20)
@@ -139,7 +139,7 @@ struct CardDetailView: View {
                     // 音声ファイルを取得
                     let audioURL = try await client.textToSpeech(
                         text: card.sourceText,
-                        voice: "onyx",
+                        voice: OpenAIClient.defaultTTSVoice,
                         speed: 0.9
                     )
                     
@@ -150,11 +150,10 @@ struct CardDetailView: View {
             } catch let error as OpenAIError {
                 errorMessage = error.errorDescription
             } catch {
-                errorMessage = "音声の取得に失敗しました: \(error.localizedDescription)"
+                errorMessage = "Failed to generate audio: \(error.localizedDescription)"
             }
             
             isLoadingAudio = false
         }
     }
 }
-

@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject private var store: CardStore
@@ -8,12 +9,15 @@ struct ContentView: View {
     var body: some View {
         TabView {
             ExplainView()
-                .tabItem { Label("英語解説", systemImage: "sparkles") }
+                .tabItem { Label("Explain", systemImage: "sparkles") }
 
             LibraryView()
-                .tabItem { Label("一覧", systemImage: "list.bullet.rectangle") }
+                .tabItem { Label("Library", systemImage: "list.bullet.rectangle") }
         }
-        .sheet(isPresented: $settings.isSettingsPresented) {
+        .sheet(isPresented: $settings.isSettingsPresented, onDismiss: {
+            // 設定画面を閉じたときにデータを再読み込み（インポート後の反映）
+            store.reloadData()
+        }) {
             SettingsView()
                 .environmentObject(settings)
         }
@@ -22,4 +26,3 @@ struct ContentView: View {
         }
     }
 }
-

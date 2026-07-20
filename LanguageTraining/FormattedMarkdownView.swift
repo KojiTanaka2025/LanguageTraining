@@ -31,19 +31,12 @@ struct FormattedMarkdownView: NSViewRepresentable {
     
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? NSTextView else {
-            print("❌ FormattedMarkdownView: TextViewが見つかりません")
             return
         }
         
-        print("✅ FormattedMarkdownView: Markdown受信 (\(markdown.count)文字)")
-        print("📝 先頭100文字: \(markdown.prefix(100))")
-        
         // Markdownをフォーマット済みAttributedStringに変換
         let attributedString = formatMarkdown(markdown)
-        print("✅ AttributedString作成: \(attributedString.length)文字")
         textView.textStorage?.setAttributedString(attributedString)
-        
-        print("✅ TextViewに設定完了")
     }
     
     private func formatMarkdown(_ text: String) -> NSAttributedString {

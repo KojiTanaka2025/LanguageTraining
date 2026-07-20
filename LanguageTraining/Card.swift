@@ -25,18 +25,11 @@ struct Card: Identifiable, Hashable {
     /// 音声ファイルの絶対パスを取得
     func audioFileURL() -> URL? {
         guard let fileName = audioFileName else { return nil }
-        guard let baseURL = try? FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        ) else { return nil }
-        
-        let audioDir = baseURL
-            .appendingPathComponent("EnglishCard", isDirectory: true)
+        guard let dataDir = try? AppStorage.dataDirectoryURL() else { return nil }
+
+        let audioDir = dataDir
             .appendingPathComponent("audio", isDirectory: true)
         
         return audioDir.appendingPathComponent(fileName, isDirectory: false)
     }
 }
-
