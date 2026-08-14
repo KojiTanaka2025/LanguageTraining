@@ -4,6 +4,7 @@
 *.xcodeproj/project.xcworkspace/xcshareddata/
 DerivedData/
 build/
+.build/
 *.moved-aside
 *.pbxuser
 !default.pbxuser

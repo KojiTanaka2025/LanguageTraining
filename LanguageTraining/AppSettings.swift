@@ -4,8 +4,6 @@ import Combine
 
 @MainActor
 final class AppSettings: ObservableObject {
-    @Published var isSettingsPresented: Bool = false
-
     @Published var openAIModel: String = "gpt-4o-mini" {
         didSet {
             UserDefaults.standard.set(openAIModel, forKey: "openAIModel")

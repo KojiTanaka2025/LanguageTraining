@@ -25,187 +25,204 @@ struct ExplainView: View {
     // 初回起動フラグ
     @State private var hasLoadedOnce = false
 
+    private var sourceText: String {
+        clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasExplanation: Bool {
+        !markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var isPlayingCurrentText: Bool {
+        audioPlayer.isPlaying && audioPlayer.currentText == clipboardText
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // 上部：入力エリア
-            VStack(alignment: .leading, spacing: 12) {
-                GroupBox("Clipboard") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextEditor(text: $clipboardText)
-                            .font(.body)
-                            .frame(minHeight: 72, idealHeight: 96, maxHeight: 120)
+        VSplitView {
+            sourcePane
+                .frame(minHeight: 160)
 
-                        HStack {
-                            Button("Load Clipboard") {
-                                loadClipboardOnly()
-                            }
-                            .disabled(isLoading || isLoadingAudio)
-                            .help("Replace the text field with the current clipboard contents")
-
-                            Button("Explain") {
-                                Task {
-                                    await explainCurrentText()
-                                }
-                            }
-                            .keyboardShortcut(.return, modifiers: [.command])
-                            .disabled(
-                                clipboardText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                                isLoading ||
-                                isLoadingAudio
-                            )
-                            .help("Generate an explanation from the text in the editor")
-                            
-                            // 音声再生ボタン
-                            Button(action: playPronunciation) {
-                                HStack(spacing: 4) {
-                                    if isLoadingAudio {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                            .frame(width: 12, height: 12)
-                                    } else if audioPlayer.isPlaying && audioPlayer.currentText == clipboardText {
-                                        Image(systemName: "speaker.wave.2.fill")
-                                    } else {
-                                        Image(systemName: "speaker.wave.2")
-                                    }
-                                }
-                            }
-                            .disabled(
-                                clipboardText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                                isLoadingAudio ||
-                                (audioPlayer.isPlaying && audioPlayer.currentText == clipboardText)
-                            )
-                            .help("Listen to the pasted text")
-
-                            Spacer()
-                        }
-                    }
-                    .padding(.top, 4)
-                }
-
-                if let errorMessage {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                            .font(.callout)
-                            .textSelection(.enabled)
-                            .padding(8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.red.opacity(0.1))
-                            )
-                        
-                        // デバッグ情報
-                        if let debugURL = constructedAPIURL {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Debug Info:")
-                                    .font(.caption)
-                                    .bold()
-                                Text("Base URL: \(settings.openAIBaseURL)")
-                                    .font(.caption)
-                                    .textSelection(.enabled)
-                                Text("Resolved URL: \(debugURL)")
-                                    .font(.caption)
-                                    .textSelection(.enabled)
-                            }
-                            .foregroundStyle(.secondary)
-                            .padding(8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.secondary.opacity(0.1))
-                            )
-                        }
-                    }
-                }
-
-                if let audioErrorMessage {
-                    HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                        Text(audioErrorMessage)
-                            .foregroundStyle(.secondary)
-                            .font(.callout)
-                            .textSelection(.enabled)
-                    }
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.orange.opacity(0.12))
-                    )
-                }
-
-                if didSave {
-                    Text("Saved to your library.")
-                        .foregroundStyle(.secondary)
-                        .font(.callout)
-                }
-
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity)
-
-            Divider()
-
-            // 下部：解説表示エリア
-            VStack(spacing: 0) {
-                HStack(alignment: .center) {
-                    Text("Explanation")
-                        .font(.headline)
-                    Spacer()
-                    
-                    // 音声保存オプション
-                    Toggle(isOn: $saveAudioWithCard) {
-                        HStack(spacing: 4) {
-                            Image(systemName: saveAudioWithCard ? "speaker.wave.2.fill" : "speaker.slash")
-                            Text("Save audio")
-                                .font(.caption)
-                        }
-                    }
-                    .toggleStyle(.checkbox)
-                    .help("Save audio with this card")
-                    
-                    if isLoading {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                    Button("Save to Library") {
-                        Task { await saveCard() }
-                    }
-                    .disabled(markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
-                }
-                .padding(16)
-
-                Divider()
-
-                if markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "doc.text.magnifyingglass")
-                            .font(.system(size: 42))
-                            .foregroundStyle(.secondary)
-                        Text("No explanation yet")
-                            .font(.title3)
-                            .bold()
-                        Text("Load text in any language, including Vietnamese, and generate an AI explanation.")
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: 420)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(40)
-                } else {
-                    FormattedMarkdownView(markdown: markdown)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(nsColor: .textBackgroundColor))
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            explanationPane
+                .frame(minHeight: 280)
         }
         .onAppear {
-            // 初回のみクリップボードを読み込む（API呼び出しはしない）
             if !hasLoadedOnce {
                 hasLoadedOnce = true
                 loadClipboardOnly()
             }
         }
+        .onChange(of: didSave) { _, saved in
+            guard saved else { return }
+            Task {
+                try? await Task.sleep(for: .seconds(2.5))
+                didSave = false
+            }
+        }
+    }
+
+    private var sourcePane: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Source text")
+                    .font(.headline)
+                Spacer()
+                if !sourceText.isEmpty {
+                    Text("\(sourceText.count) characters")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $clipboardText)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(4)
+
+                if clipboardText.isEmpty {
+                    Text("Paste a word, phrase, or sentence in any language.")
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 12)
+                        .allowsHitTesting(false)
+                }
+            }
+            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+            )
+
+            HStack(spacing: 8) {
+                Button("Load Clipboard", action: loadClipboardOnly)
+                    .disabled(isLoading || isLoadingAudio)
+                    .help("Replace the text field with the current clipboard contents")
+
+                Button(action: togglePronunciation) {
+                    Label {
+                        Text(isPlayingCurrentText ? "Stop" : "Listen")
+                    } icon: {
+                        if isLoadingAudio {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: isPlayingCurrentText ? "stop.fill" : "speaker.wave.2")
+                        }
+                    }
+                }
+                .disabled(sourceText.isEmpty || isLoadingAudio)
+                .help("Play pronunciation of the source text")
+
+                Spacer()
+
+                Button("Explain") {
+                    Task { await explainCurrentText() }
+                }
+                .keyboardShortcut(.return, modifiers: [.command])
+                .buttonStyle(.borderedProminent)
+                .disabled(sourceText.isEmpty || isLoading || isLoadingAudio)
+                .help("Generate an explanation from the text in the editor")
+            }
+
+            if let errorMessage {
+                notice(errorMessage, tone: .error)
+            }
+
+            if let audioErrorMessage {
+                notice(audioErrorMessage, tone: .warning)
+            }
+
+            if didSave {
+                Label("Saved to your library.", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.callout)
+            }
+        }
+        .padding(16)
+    }
+
+    private var explanationPane: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 12) {
+                Text("Explanation")
+                    .font(.headline)
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Generating…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+
+                Toggle(isOn: $saveAudioWithCard) {
+                    Text("Save audio")
+                }
+                .toggleStyle(.checkbox)
+                .help("Save pronunciation audio with this card")
+
+                Button("Save to Library") {
+                    Task { await saveCard() }
+                }
+                .keyboardShortcut("s", modifiers: [.command])
+                .buttonStyle(.borderedProminent)
+                .disabled(!hasExplanation || isLoading || store.loadErrorMessage != nil)
+                .help("Save this card to your library")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            if isLoading && !hasExplanation {
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("Generating explanation…")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !hasExplanation {
+                VStack(spacing: 8) {
+                    Image(systemName: "text.book.closed")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No explanation yet")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                    Text("Paste text, then press Explain or Command-Return.")
+                        .font(.callout)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(40)
+            } else {
+                FormattedMarkdownView(markdown: markdown)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(nsColor: .textBackgroundColor))
+            }
+        }
+    }
+
+    private enum NoticeTone {
+        case error
+        case warning
+    }
+
+    private func notice(_ message: String, tone: NoticeTone) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: tone == .error ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(tone == .error ? Color.red : Color.orange)
+            Text(message)
+                .font(.callout)
+                .textSelection(.enabled)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill((tone == .error ? Color.red : Color.orange).opacity(0.1))
+        )
     }
     
     // MARK: - Methods
@@ -383,19 +400,14 @@ struct ExplainView: View {
             cleanupTempAudio()
         }
     }
-    
-    private var constructedAPIURL: String? {
-        let trimmed = settings.openAIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let base = URL(string: trimmed) else { return nil }
-        var urlString = base.absoluteString
-        while urlString.hasSuffix("/") {
-            urlString.removeLast()
+
+    private func togglePronunciation() {
+        if isPlayingCurrentText {
+            audioPlayer.stop()
+            return
         }
-        urlString += "/v1/chat/completions"
-        return urlString
+        playPronunciation()
     }
-    
-    // MARK: - Audio Playback
     
     private func playPronunciation() {
         Task {

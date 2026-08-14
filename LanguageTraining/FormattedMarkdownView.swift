@@ -4,28 +4,28 @@ import AppKit
 /// NSTextViewを使用してMarkdownをフォーマット済みで表示するビュー
 struct FormattedMarkdownView: NSViewRepresentable {
     let markdown: String
-    
+
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSTextView.scrollableTextView()
-        
+        scrollView.drawsBackground = false
+        scrollView.hasHorizontalScroller = false
+
         guard let textView = scrollView.documentView as? NSTextView else {
             return scrollView
         }
-        
-        // テキストビューの設定
+
         textView.isEditable = false
         textView.isSelectable = true
+        textView.drawsBackground = false
         textView.backgroundColor = .clear
-        textView.textContainerInset = NSSize(width: 20, height: 20)
+        textView.textContainerInset = NSSize(width: 24, height: 22)
         textView.textContainer?.lineFragmentPadding = 0
-        
-        // デフォルトのテキストカラー
+        textView.textContainer?.lineBreakMode = .byWordWrapping
         textView.textColor = .labelColor
-        
-        // リッチテキストを有効化
         textView.allowsUndo = false
         textView.isRichText = true
-        
+        textView.usesAdaptiveColorMappingForDarkAppearance = true
+
         return scrollView
     }
 
@@ -35,235 +35,244 @@ struct FormattedMarkdownView: NSViewRepresentable {
 
     final class Coordinator {
         var lastMarkdown: String?
+        var lastAppearance: NSAppearance.Name?
     }
-    
+
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? NSTextView else {
             return
         }
-        guard context.coordinator.lastMarkdown != markdown else {
-            return
-        }
+
+        let appearance = scrollView.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])
+        let markdownChanged = context.coordinator.lastMarkdown != markdown
+        let appearanceChanged = context.coordinator.lastAppearance != appearance
+        guard markdownChanged || appearanceChanged else { return }
+
+        let savedOffset = scrollView.contentView.bounds.origin
         context.coordinator.lastMarkdown = markdown
-        
-        let attributedString = formatMarkdown(markdown)
-        textView.textStorage?.setAttributedString(attributedString)
-    }
-    
-    private func formatMarkdown(_ text: String) -> NSAttributedString {
-        let attributedString = NSMutableAttributedString()
-        
-        // 段落スタイルのデフォルト設定
-        let defaultParagraphStyle = NSMutableParagraphStyle()
-        defaultParagraphStyle.lineSpacing = 4
-        defaultParagraphStyle.paragraphSpacing = 12
-        
-        // 行ごとに処理
-        let lines = text.components(separatedBy: .newlines)
-        
-        for (index, line) in lines.enumerated() {
-            let processedLine = processLine(line)
-            attributedString.append(processedLine)
-            
-            // 最後の行以外は改行を追加
-            if index < lines.count - 1 {
-                attributedString.append(NSAttributedString(string: "\n"))
-            }
-        }
-        
-        return attributedString
-    }
-    
-    private func processLine(_ line: String) -> NSAttributedString {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        
-        // 段落スタイル
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 3
-        
-        // 見出し1 (# Title)
-        if trimmed.hasPrefix("# ") {
-            let title = String(trimmed.dropFirst(2))
-            paragraphStyle.paragraphSpacing = 16
-            paragraphStyle.paragraphSpacingBefore = 8
-            return NSAttributedString(
-                string: title,
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 28, weight: .bold),
-                    .foregroundColor: NSColor.labelColor,
-                    .paragraphStyle: paragraphStyle
-                ]
-            )
-        }
-        
-        // 見出し2 (## Title)
-        if trimmed.hasPrefix("## ") {
-            let title = String(trimmed.dropFirst(3))
-            paragraphStyle.paragraphSpacing = 12
-            paragraphStyle.paragraphSpacingBefore = 16
-            return NSAttributedString(
-                string: title,
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 22, weight: .bold),
-                    .foregroundColor: NSColor.labelColor,
-                    .paragraphStyle: paragraphStyle
-                ]
-            )
-        }
-        
-        // 見出し3 (### Title)
-        if trimmed.hasPrefix("### ") {
-            let title = String(trimmed.dropFirst(4))
-            paragraphStyle.paragraphSpacing = 10
-            paragraphStyle.paragraphSpacingBefore = 12
-            return NSAttributedString(
-                string: title,
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 18, weight: .semibold),
-                    .foregroundColor: NSColor.labelColor,
-                    .paragraphStyle: paragraphStyle
-                ]
-            )
-        }
-        
-        // 見出し4 (#### Title) - AIの出力でよく使われる
-        if trimmed.hasPrefix("#### ") {
-            let title = String(trimmed.dropFirst(5))
-            paragraphStyle.paragraphSpacing = 8
-            paragraphStyle.paragraphSpacingBefore = 12
-            return NSAttributedString(
-                string: title,
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 16, weight: .semibold),
-                    .foregroundColor: NSColor.systemBlue,
-                    .paragraphStyle: paragraphStyle
-                ]
-            )
-        }
-        
-        // リスト項目 (- Item または 1. Item)
-        if trimmed.hasPrefix("- ") || trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil {
-            paragraphStyle.paragraphSpacing = 4
-            paragraphStyle.firstLineHeadIndent = 0
-            paragraphStyle.headIndent = 20
-            return formatListItem(line, paragraphStyle: paragraphStyle)
-        }
-        
-        // 空行
-        if trimmed.isEmpty {
-            return NSAttributedString(string: "")
-        }
-        
-        // 通常のテキスト（太字やイタリックを処理）
-        paragraphStyle.paragraphSpacing = 6
-        return formatInlineStyles(line, paragraphStyle: paragraphStyle)
-    }
-    
-    private func formatListItem(_ line: String, paragraphStyle: NSMutableParagraphStyle) -> NSAttributedString {
-        let attributed = NSMutableAttributedString()
-        
-        // インデントを保持
-        let leadingSpaces = line.prefix(while: { $0 == " " }).count
-        let baseIndent = CGFloat(leadingSpaces * 8)
-        
-        paragraphStyle.firstLineHeadIndent = baseIndent
-        paragraphStyle.headIndent = baseIndent + 20
-        
-        // リスト記号または番号を処理
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        if trimmed.hasPrefix("- ") {
-            attributed.append(NSAttributedString(
-                string: "•  ",
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 15, weight: .bold),
-                    .foregroundColor: NSColor.systemBlue,
-                    .paragraphStyle: paragraphStyle
-                ]
-            ))
-            let content = String(trimmed.dropFirst(2))
-            attributed.append(formatInlineStyles(content, paragraphStyle: paragraphStyle))
-        } else if let range = trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) {
-            let number = String(trimmed[range])
-            attributed.append(NSAttributedString(
-                string: number + " ",
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 15, weight: .semibold),
-                    .foregroundColor: NSColor.systemBlue,
-                    .paragraphStyle: paragraphStyle
-                ]
-            ))
-            let content = String(trimmed[range.upperBound...])
-            attributed.append(formatInlineStyles(content, paragraphStyle: paragraphStyle))
-        }
-        
-        return attributed
-    }
-    
-    private func formatInlineStyles(_ text: String, paragraphStyle: NSMutableParagraphStyle? = nil) -> NSAttributedString {
-        var attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 15),
-            .foregroundColor: NSColor.labelColor
-        ]
-        
-        if let paragraphStyle = paragraphStyle {
-            attributes[.paragraphStyle] = paragraphStyle
-        }
-        
-        let attributed = NSMutableAttributedString(
-            string: text,
-            attributes: attributes
-        )
-        
-        // 太字 (**text**)
-        formatPattern(in: attributed, pattern: #"\*\*([^*]+)\*\*"#, attributes: [
-            .font: NSFont.systemFont(ofSize: 15, weight: .bold),
-            .foregroundColor: NSColor.labelColor
-        ])
-        
-        // イタリック (*text*)
-        formatPattern(in: attributed, pattern: #"(?<!\*)\*([^*]+)\*(?!\*)"#, attributes: [
-            .font: NSFont.systemFont(ofSize: 15).italicized,
-            .foregroundColor: NSColor.secondaryLabelColor
-        ])
-        
-        // コード (`code`)
-        formatPattern(in: attributed, pattern: #"`([^`]+)`"#, attributes: [
-            .font: NSFont.monospacedSystemFont(ofSize: 14, weight: .regular),
-            .foregroundColor: NSColor.systemPink,
-            .backgroundColor: NSColor.systemGray.withAlphaComponent(0.15)
-        ])
-        
-        return attributed
-    }
-    
-    private func formatPattern(in attributedString: NSMutableAttributedString, pattern: String, attributes: [NSAttributedString.Key: Any]) {
-        let string = attributedString.string
-        
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
-            return
-        }
-        
-        let matches = regex.matches(in: string, options: [], range: NSRange(string.startIndex..., in: string))
-        
-        // 後ろから処理（インデックスがずれないように）
-        for match in matches.reversed() {
-            if match.numberOfRanges >= 2 {
-                let fullRange = match.range(at: 0)
-                let contentRange = match.range(at: 1)
-                
-                if let contentSwiftRange = Range(contentRange, in: string) {
-                    let content = String(string[contentSwiftRange])
-                    let replacement = NSAttributedString(string: content, attributes: attributes)
-                    attributedString.replaceCharacters(in: fullRange, with: replacement)
-                }
-            }
+        context.coordinator.lastAppearance = appearance
+
+        textView.textStorage?.setAttributedString(MarkdownFormatter.format(markdown))
+
+        if !markdownChanged {
+            scrollView.contentView.scroll(to: savedOffset)
+            scrollView.reflectScrolledClipView(scrollView.contentView)
         }
     }
 }
 
-extension NSFont {
-    var italicized: NSFont {
-        let descriptor = fontDescriptor.withSymbolicTraits(.italic)
-        return NSFont(descriptor: descriptor, size: pointSize) ?? self
+private enum MarkdownFormatter {
+    private static let bodySize: CGFloat = 15
+    private static let titleSize: CGFloat = 24
+    private static let sectionSize: CGFloat = 17
+    private static let subsectionSize: CGFloat = 15
+
+    static func format(_ text: String) -> NSAttributedString {
+        let output = NSMutableAttributedString()
+        let lines = text.components(separatedBy: .newlines)
+
+        for (index, line) in lines.enumerated() {
+            output.append(processLine(line))
+            if index < lines.count - 1 {
+                output.append(NSAttributedString(string: "\n"))
+            }
+        }
+
+        return output
+    }
+
+    private static func processLine(_ line: String) -> NSAttributedString {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+        if trimmed.hasPrefix("# ") {
+            return heading(String(trimmed.dropFirst(2)), size: titleSize, weight: .bold, spaceBefore: 4, spaceAfter: 14)
+        }
+        if trimmed.hasPrefix("## ") {
+            return heading(String(trimmed.dropFirst(3)), size: sectionSize, weight: .semibold, spaceBefore: 22, spaceAfter: 8)
+        }
+        if trimmed.hasPrefix("### ") {
+            return heading(String(trimmed.dropFirst(4)), size: subsectionSize, weight: .semibold, spaceBefore: 14, spaceAfter: 6)
+        }
+        if trimmed.hasPrefix("#### ") {
+            return heading(String(trimmed.dropFirst(5)), size: subsectionSize, weight: .medium, spaceBefore: 12, spaceAfter: 4, color: .secondaryLabelColor)
+        }
+        if trimmed == "---" || trimmed == "***" {
+            return heading(" ", size: 6, weight: .regular, spaceBefore: 8, spaceAfter: 8, color: .tertiaryLabelColor)
+        }
+        if trimmed.hasPrefix("- ") || trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil {
+            return formatListItem(line)
+        }
+        if trimmed.isEmpty {
+            return NSAttributedString(string: "")
+        }
+
+        return formatInlineStyles(line, paragraphStyle: bodyParagraphStyle())
+    }
+
+    private static func heading(
+        _ title: String,
+        size: CGFloat,
+        weight: NSFont.Weight,
+        spaceBefore: CGFloat,
+        spaceAfter: CGFloat,
+        color: NSColor = .labelColor
+    ) -> NSAttributedString {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 2
+        paragraphStyle.paragraphSpacingBefore = spaceBefore
+        paragraphStyle.paragraphSpacing = spaceAfter
+        return formatInlineStyles(
+            title,
+            paragraphStyle: paragraphStyle,
+            font: NSFont.systemFont(ofSize: size, weight: weight),
+            color: color
+        )
+    }
+
+    private static func formatListItem(_ line: String) -> NSAttributedString {
+        let leadingSpaces = line.prefix(while: { $0 == " " }).count
+        let level = min(leadingSpaces / 2, 3)
+        let baseIndent = 18 + CGFloat(level) * 16
+
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 4
+        paragraphStyle.paragraphSpacing = 6
+        paragraphStyle.firstLineHeadIndent = baseIndent
+        paragraphStyle.headIndent = baseIndent + 18
+
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        let marker: String
+        let content: String
+
+        if trimmed.hasPrefix("- ") {
+            marker = level == 0 ? "•" : "◦"
+            content = String(trimmed.dropFirst(2))
+        } else if let range = trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) {
+            marker = String(trimmed[range]).trimmingCharacters(in: .whitespaces)
+            content = String(trimmed[range.upperBound...])
+        } else {
+            return formatInlineStyles(line, paragraphStyle: paragraphStyle)
+        }
+
+        let attributed = NSMutableAttributedString()
+        attributed.append(NSAttributedString(
+            string: marker + "  ",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: bodySize, weight: .regular),
+                .foregroundColor: NSColor.tertiaryLabelColor,
+                .paragraphStyle: paragraphStyle
+            ]
+        ))
+        attributed.append(formatLabeledContent(content, paragraphStyle: paragraphStyle))
+        return attributed
+    }
+
+    /// `- ラベル: 本文` を、ラベルだけ少し強調して読みやすくする
+    private static func formatLabeledContent(_ content: String, paragraphStyle: NSParagraphStyle) -> NSAttributedString {
+        if let colon = content.firstIndex(of: ":") {
+            let label = String(content[..<colon]).trimmingCharacters(in: .whitespaces)
+            let remainder = String(content[colon...])
+            if !label.isEmpty, label.count <= 40, !label.contains("**") {
+                let result = NSMutableAttributedString()
+                result.append(formatInlineStyles(
+                    label,
+                    paragraphStyle: paragraphStyle,
+                    font: NSFont.systemFont(ofSize: bodySize, weight: .medium)
+                ))
+                result.append(formatInlineStyles(remainder, paragraphStyle: paragraphStyle))
+                return result
+            }
+        }
+        return formatInlineStyles(content, paragraphStyle: paragraphStyle)
+    }
+
+    private static func bodyParagraphStyle() -> NSMutableParagraphStyle {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 5
+        paragraphStyle.paragraphSpacing = 8
+        return paragraphStyle
+    }
+
+    private static func formatInlineStyles(
+        _ text: String,
+        paragraphStyle: NSParagraphStyle? = nil,
+        font: NSFont = NSFont.systemFont(ofSize: bodySize),
+        color: NSColor = .labelColor
+    ) -> NSAttributedString {
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color
+        ]
+        if let paragraphStyle {
+            attributes[.paragraphStyle] = paragraphStyle
+        }
+
+        let attributed = NSMutableAttributedString(string: text, attributes: attributes)
+
+        formatPattern(in: attributed, pattern: #"\*\*([^*]+)\*\*"#, attributes: merged(
+            base: attributes,
+            [
+                .font: NSFont.systemFont(ofSize: font.pointSize, weight: .semibold),
+                .foregroundColor: NSColor.labelColor
+            ]
+        ))
+
+        formatPattern(in: attributed, pattern: #"(?<!\*)\*([^*]+)\*(?!\*)"#, attributes: merged(
+            base: attributes,
+            [
+                .font: italicFont(size: font.pointSize),
+                .foregroundColor: NSColor.labelColor
+            ]
+        ))
+
+        formatPattern(in: attributed, pattern: #"`([^`]+)`"#, attributes: merged(
+            base: attributes,
+            [
+                .font: NSFont.monospacedSystemFont(ofSize: max(font.pointSize - 1, 12), weight: .regular),
+                .foregroundColor: NSColor.labelColor,
+                .backgroundColor: NSColor.quaternaryLabelColor.withAlphaComponent(0.18)
+            ]
+        ))
+
+        return attributed
+    }
+
+    private static func merged(
+        base: [NSAttributedString.Key: Any],
+        _ overlay: [NSAttributedString.Key: Any]
+    ) -> [NSAttributedString.Key: Any] {
+        var result = base
+        overlay.forEach { result[$0.key] = $0.value }
+        return result
+    }
+
+    private static func italicFont(size: CGFloat) -> NSFont {
+        let base = NSFont.systemFont(ofSize: size)
+        let descriptor = base.fontDescriptor.withSymbolicTraits(.italic)
+        return NSFont(descriptor: descriptor, size: size) ?? base
+    }
+
+    private static func formatPattern(
+        in attributedString: NSMutableAttributedString,
+        pattern: String,
+        attributes: [NSAttributedString.Key: Any]
+    ) {
+        let string = attributedString.string
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return
+        }
+
+        let matches = regex.matches(in: string, options: [], range: NSRange(string.startIndex..., in: string))
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let contentRange = Range(match.range(at: 1), in: string) else {
+                continue
+            }
+            let content = String(string[contentRange])
+            attributedString.replaceCharacters(
+                in: match.range(at: 0),
+                with: NSAttributedString(string: content, attributes: attributes)
+            )
+        }
     }
 }

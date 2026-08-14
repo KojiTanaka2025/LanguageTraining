@@ -2,50 +2,53 @@ import SwiftUI
 import Combine
 import UniformTypeIdentifiers
 
+private enum AppTab: Hashable {
+    case explain
+    case library
+}
+
 struct ContentView: View {
     @EnvironmentObject private var store: CardStore
     @EnvironmentObject private var settings: AppSettings
+    @State private var selectedTab: AppTab = .explain
 
     var body: some View {
-        TabView {
-            ExplainView()
-                .tabItem { Label("Explain", systemImage: "sparkles") }
+        TabView(selection: $selectedTab) {
+            Tab("Explain", systemImage: "sparkles", value: .explain) {
+                ExplainView()
+            }
 
-            LibraryView()
-                .tabItem { Label("Library", systemImage: "list.bullet.rectangle") }
-        }
-        .sheet(isPresented: $settings.isSettingsPresented, onDismiss: {
-            // 設定画面を閉じたときにデータを再読み込み（インポート後の反映）
-            store.reloadData()
-        }) {
-            SettingsView()
-                .environmentObject(settings)
+            Tab("Library", systemImage: "books.vertical", value: .library) {
+                LibraryView()
+            }
         }
         .onAppear {
             store.loadIfNeeded()
         }
         .safeAreaInset(edge: .bottom) {
             if let message = store.loadErrorMessage {
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                    VStack(alignment: .leading, spacing: 4) {
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("Library could not be loaded")
                             .font(.headline)
                         Text(message)
                             .font(.callout)
-                            .textSelection(.enabled)
-                        Text("Saving is disabled so your existing cards.xml is not overwritten.")
-                            .font(.caption)
                             .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                        Text("Saving is disabled so existing cards are not overwritten.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                     Spacer()
                     Button("Retry") {
                         store.reloadData()
                     }
+                    .buttonStyle(.bordered)
                 }
                 .padding(12)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(.bar)
             }
         }
     }

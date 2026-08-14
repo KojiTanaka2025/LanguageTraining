@@ -27,30 +27,44 @@ struct OpenAIClient {
         }
 
         let template = Self.localizedExplanationTemplate(for: explanationLanguage)
+        let styleGuide = Self.writingStyle(for: explanationLanguage)
         let system = """
-You are a multilingual language-learning teacher. Explain the pasted word, phrase, or sentence as a learning card, regardless of the source language.
+You are a patient English teacher for beginner to intermediate learners (about CEFR A2–B1).
+
+The user is an English learner. Your job is a learning card they can understand in a few seconds, then reuse.
+
+Learner-first rules:
+- Put meaning first. Grammar comes after the learner already understands the idea.
+- Write the whole card in \(explanationLanguage).
+- \(styleGuide)
+- Use short sentences. One idea per bullet.
+- Do not use grammar jargon alone. If you need a term, add a plain-language gloss in parentheses, then show it inside the learner's actual text.
+- Always explain with the learner's words. Never give empty patterns like "S + V + O" without filling them from the text.
+- After meaning, always teach the grammar that actually appears in the text.
+- Cover articles (a / an / the / none), prepositions, tense and verb form, and any other grammar that matters here (countable vs uncountable nouns, verb patterns, auxiliaries, relative clauses, comparatives, conditionals, word order). Only explain what is in this text.
+- For each grammar point: name it in simple words, show the exact words from the text, say why this form is used, and give a short contrast when it helps (for example a vs the, in vs at, I go vs I am going).
+- If the text is English, do not skip grammar. Even one word has a word class, an article choice, or a word form to explain.
+- If the source text is not English, explain the grammar of the natural English equivalent, plus any original-language point the learner needs.
+- If the source text is English, teach that English: meaning, stress, useful chunks, and when to say it.
+- If the source text is not English, still help an English learner: give a natural English equivalent they can remember, plus anything needed to understand the original.
+- Mark the target word or phrase in **bold** in examples.
+- Keep examples short and useful in daily life.
+- For English, mark stress with CAPITALS on the strong syllable (for example proCRASTinate) and give one practical pronunciation tip.
+- For Vietnamese source text, include tone and pronunciation help.
+- Do not pad. If a field does not apply, write the localized equivalent of "Not applicable" with a brief reason.
 
 Output rules:
-- Always write in Markdown.
-- Do not include greetings, prefaces, or labels such as "Learning card:".
-- Always use the exact localized section headings, field labels, section order, and structure in the template below.
-- Do not omit any section. If a section does not apply, use the localized equivalent of "Not applicable" with a brief reason.
-- Write the full explanation in \(explanationLanguage).
+- Markdown only. No greeting and no label such as "Learning card:".
+- Use the exact localized headings, field labels, section order, and structure in the template.
 - Do not translate the top-level title after "#"; keep the user's original text there.
-- Do not leave any section heading or field label in English unless \(explanationLanguage) is English.
-- Keep grammar explanations concrete and easy for beginner to intermediate learners to follow.
-- Detect the source language from the user's text.
-- Explicitly support Vietnamese input, including Vietnamese tone marks and pronunciation notes.
-- If the source text is not English, include a translation in \(explanationLanguage) and explain any source-language grammar that matters for understanding it.
-- If the source text is already in \(explanationLanguage), use the original text as the translation.
-- Preserve the original script for examples, and add romanization only when it helps learners read the text.
+- Do not leave any heading or field label in English unless \(explanationLanguage) is English.
 
 Template:
 \(template)
 """
 
         let user = """
-Explain the following text in \(explanationLanguage).
+Create a clear learning card for an English learner. Explain this text in \(explanationLanguage):
 
 \(text)
 """
@@ -91,304 +105,417 @@ Explain the following text in \(explanationLanguage).
         return content
     }
 
+    private static func writingStyle(for language: String) -> String {
+        switch language {
+        case "Japanese":
+            return "中学生でも読める日本語で書く。ですます調。文法用語を使うなら、すぐにかっこでやさしい言い換えを付ける。"
+        case "Vietnamese":
+            return "Viết bằng tiếng Việt dễ hiểu, câu ngắn, tránh thuật ngữ trừu tượng trừ khi giải thích ngay."
+        case "Korean":
+            return "중학생도 읽을 수 있는 쉬운 한국어로 쓴다. 문법 용어를 쓰면 바로 쉬운 말로 풀어 준다."
+        case "Simplified Chinese":
+            return "用初中生能看懂的简体中文写。句子要短。若使用语法术语，立刻用白话解释。"
+        case "Traditional Chinese":
+            return "用國中生能看懂的繁體中文寫。句子要短。若使用文法術語，立刻用白話解釋。"
+        case "French":
+            return "Écris en français simple, phrases courtes. Si tu utilises un terme grammatical, explique-le tout de suite avec des mots faciles."
+        case "Spanish":
+            return "Escribe en español sencillo, frases cortas. Si usas un término gramatical, explícalo de inmediato con palabras fáciles."
+        case "German":
+            return "Schreibe in einfachem Deutsch, kurze Sätze. Grammatikbegriffe sofort mit einfachen Worten erklären."
+        default:
+            return "Write in easy English a B1 learner can follow. Short sentences. Common words. If you use a grammar term, explain it immediately in plain words."
+        }
+    }
+
     private static func localizedExplanationTemplate(for language: String) -> String {
         switch language {
         case "Japanese":
             return """
             # {ユーザーの原文}
 
-            ## 1. 元の言語と訳
-            - 元の言語:
-            - 日本語訳:
-            - ニュアンス:
+            ## 1. まずは意味
+            - かんたんな言い方:
+            - 自然な日本語訳:
+            - 自然な英語（学習用）:
+            - どんなときに使う:
+            - カジュアル / フォーマル:
 
-            ## 2. 文法と構造
-            - 種別: 単語 / フレーズ / 文
-            - 品詞または文型:
-            - 主語・動詞・目的語・補語:
-            - 修飾関係:
-            - 時制・助詞・助動詞・語順・活用・前置詞・関係節など:
-            - ベトナム語の場合は、声調、類別詞、助詞、語順、アスペクト標識、代名詞、丁寧さも必要に応じて説明:
+            ## 2. 発音のポイント
+            - 強く読む音:
+            - 発音のコツ:
 
-            ## 3. 重要語句
-            - 原文から重要な語句を3〜6個説明:
-            - 必要に応じてローマ字表記や発音メモ:
+            ## 3. 文のしくみ
+            - 種類: 単語 / フレーズ / 文
+            - パーツごと（原文の順。「原文」= やさしい意味）:
+            - 同じ型で言えるパターン:
 
-            ## 4. 使い方と例文
-            - 元の言語の例文1:
-            - 日本語での意味:
-            - 元の言語の例文2:
-            - 日本語での意味:
+            ## 4. 文法の解説
+            - 時制・形（いま / 過去 / 進行など）:
+            - 冠詞（a / an / the / なし）:
+            - 前置詞:
+            - この文に出るほかの文法（可算・不可算、動詞の形、助動詞、関係詞など）:
+            - なぜこの形なのか（原文の語を使って、似た形との違いも）:
 
-            ## 5. 間違えやすいポイント
-            - 発音、使い方、文法、レジスター、似た表現との違い:
+            ## 5. 覚えておきたい語句
+            - 2〜5個。各語句は「やさしい意味 / よく一緒に使う語」:
 
-            ## 6. 覚えるポイント
-            - 重要点を3〜5個の短い箇条書きで要約:
+            ## 6. 使える例
+            - 例文1（太字で学習箇所を示す）:
+            - 意味:
+            - 例文2:
+            - 意味:
+
+            ## 7. まちがいやすいところ
+            - 似た表現との違い:
+            - やりがちなミス:
+
+            ## 8. これだけ覚えよう
+            - 短いポイントを3つ:
             """
         case "Vietnamese":
             return """
             # {nguyên văn của người dùng}
 
-            ## 1. Ngôn ngữ gốc và bản dịch
-            - Ngôn ngữ gốc:
-            - Bản dịch tiếng Việt:
-            - Sắc thái:
+            ## 1. Ý nghĩa trước
+            - Nói dễ hiểu:
+            - Bản dịch tiếng Việt tự nhiên:
+            - Câu tiếng Anh tự nhiên (để học):
+            - Khi nào dùng:
+            - Thân mật / trang trọng:
 
-            ## 2. Ngữ pháp và cấu trúc
+            ## 2. Cách đọc
+            - Âm nhấn:
+            - Mẹo phát âm:
+
+            ## 3. Cách cấu tạo
             - Loại: từ / cụm từ / câu
-            - Từ loại hoặc mẫu câu:
-            - Chủ ngữ, động từ, tân ngữ, bổ ngữ:
-            - Thành phần bổ nghĩa:
-            - Thì, tiểu từ, trợ động từ, trật tự từ, biến đổi hình thái, giới từ, mệnh đề quan hệ hoặc ngữ pháp quan trọng khác:
-            - Với tiếng Việt, hãy giải thích thanh điệu, lượng từ, tiểu từ, trật tự từ, dấu hiệu thể, đại từ và sắc thái lịch sự khi phù hợp:
+            - Từng phần (theo đúng thứ tự nguyên văn):
+            - Mẫu câu có thể dùng lại:
 
-            ## 3. Từ vựng quan trọng
-            - Giải thích 3 đến 6 từ hoặc cụm từ quan trọng trong nguyên văn:
-            - Thêm ghi chú phát âm hoặc phiên âm khi hữu ích:
+            ## 4. Giải thích ngữ pháp
+            - Thì / dạng (hiện tại / quá khứ / đang diễn ra...):
+            - Mạo từ (a / an / the / không có):
+            - Giới từ:
+            - Ngữ pháp khác trong câu này (đếm được / không đếm được, dạng động từ, trợ động từ, mệnh đề quan hệ...):
+            - Vì sao dùng dạng này (dùng đúng chữ trong nguyên văn, so với dạng gần giống):
 
-            ## 4. Cách dùng và ví dụ
-            - Ví dụ 1 bằng ngôn ngữ gốc:
-            - Nghĩa tiếng Việt:
-            - Ví dụ 2 bằng ngôn ngữ gốc:
-            - Nghĩa tiếng Việt:
+            ## 5. Từ cần nhớ
+            - 2 đến 5 mục: nghĩa dễ / từ hay đi kèm:
 
-            ## 5. Điểm dễ nhầm lẫn
-            - Phát âm, cách dùng, ngữ pháp, sắc thái giao tiếp hoặc điểm khác với cách diễn đạt tương tự:
+            ## 6. Ví dụ dùng được
+            - Ví dụ 1 (in đậm phần cần học):
+            - Nghĩa:
+            - Ví dụ 2:
+            - Nghĩa:
 
-            ## 6. Điểm cần ghi nhớ
-            - Tóm tắt các điểm quan trọng nhất bằng 3 đến 5 gạch đầu dòng ngắn:
+            ## 7. Dễ nhầm
+            - Khác với cách nói gần giống:
+            - Lỗi người học hay mắc:
+
+            ## 8. Chỉ cần nhớ
+            - 3 ý ngắn:
             """
         case "Korean":
             return """
             # {사용자의 원문}
 
-            ## 1. 원어와 번역
-            - 원어:
-            - 한국어 번역:
-            - 뉘앙스:
+            ## 1. 먼저 의미
+            - 쉬운 말:
+            - 자연스러운 한국어:
+            - 자연스러운 영어 (학습용):
+            - 언제 쓰나:
+            - 캐주얼 / 격식:
 
-            ## 2. 문법과 구조
+            ## 2. 발음 포인트
+            - 강하게 읽는 부분:
+            - 발음 팁:
+
+            ## 3. 문장 구조
             - 유형: 단어 / 구 / 문장
-            - 품사 또는 문장 패턴:
-            - 주어, 동사, 목적어, 보어:
-            - 수식 관계:
-            - 시제, 조사, 조동사, 어순, 활용, 전치사, 관계절 또는 기타 핵심 문법:
-            - 베트남어인 경우 성조, 분류사, 조사, 어순, 상 표지, 대명사, 격식을 필요에 따라 설명:
+            - 조각별로 (원문 순서, 「원문」= 쉬운 뜻):
+            - 같은 틀로 말하는 패턴:
 
-            ## 3. 핵심 어휘
-            - 원문에서 중요한 단어나 표현 3~6개 설명:
-            - 필요하면 로마자 표기나 발음 메모 추가:
+            ## 4. 문법 설명
+            - 시제 / 형태 (지금 / 과거 / 진행 등):
+            - 관사 (a / an / the / 없음):
+            - 전치사:
+            - 이 문에 나오는 다른 문법 (가산/불가산, 동사 형태, 조동사, 관계절 등):
+            - 왜 이 형태인지 (원문 단어를 쓰고, 비슷한 형태와 비교):
 
-            ## 4. 사용법과 예문
-            - 원어 예문 1:
-            - 한국어 의미:
-            - 원어 예문 2:
-            - 한국어 의미:
+            ## 5. 기억할 어휘
+            - 2~5개. 각 항목은 쉬운 뜻 / 자주 같이 쓰는 말:
 
-            ## 5. 헷갈리기 쉬운 점
-            - 발음, 용법, 문법, 격식, 비슷한 표현과의 차이:
+            ## 6. 써보는 예
+            - 예문 1 (배울 부분을 굵게):
+            - 의미:
+            - 예문 2:
+            - 의미:
 
-            ## 6. 기억할 핵심
-            - 가장 중요한 점을 3~5개의 짧은 bullet로 요약:
+            ## 7. 헷갈리기 쉬운 점
+            - 비슷한 표현과의 차이:
+            - 학습자가 자주 하는 실수:
+
+            ## 8. 이것만 기억
+            - 짧은 포인트 3개:
             """
         case "Simplified Chinese":
             return """
             # {用户的原文}
 
-            ## 1. 原语言和翻译
-            - 原语言:
-            - 简体中文翻译:
-            - 语气和细微差别:
+            ## 1. 先看意思
+            - 简单说法:
+            - 自然的简体中文:
+            - 自然的英语（用来学）:
+            - 什么时候用:
+            - 随意 / 正式:
 
-            ## 2. 语法和结构
+            ## 2. 发音要点
+            - 重读的部分:
+            - 发音提示:
+
+            ## 3. 怎么组成
             - 类型: 单词 / 短语 / 句子
-            - 词性或句型:
-            - 主语、动词、宾语、补语:
-            - 修饰关系:
-            - 时态、助词、助动词、语序、屈折变化、介词、关系从句或其他重点语法:
-            - 如果是越南语，请根据需要说明声调、量词、小品词、语序、体标记、代词和语体:
+            - 按原文顺序拆开（「原文」= 简单意思）:
+            - 可以套用的句型:
 
-            ## 3. 重点词汇
-            - 从原文中解释3到6个重要单词或短语:
-            - 必要时加入罗马字或发音说明:
+            ## 4. 语法说明
+            - 时态 / 形式（现在 / 过去 / 进行等）:
+            - 冠词（a / an / the / 不用）:
+            - 介词:
+            - 这句话里其他重要语法（可数/不可数、动词形式、助动词、定语从句等）:
+            - 为什么用这个形式（用原文的词，并和相近形式对比）:
 
-            ## 4. 用法和例句
-            - 原语言例句1:
-            - 简体中文意思:
-            - 原语言例句2:
-            - 简体中文意思:
+            ## 5. 要记住的词
+            - 2到5个。每项: 简单意思 / 常一起出现的词:
 
-            ## 5. 容易混淆的点
-            - 发音、用法、语法、语体或相似表达的区别:
+            ## 6. 可以这样说
+            - 例句1（学习部分加粗）:
+            - 意思:
+            - 例句2:
+            - 意思:
 
-            ## 6. 记忆要点
-            - 用3到5条简短要点总结:
+            ## 7. 容易搞混
+            - 和相近说法的差别:
+            - 学习者常犯的错:
+
+            ## 8. 只记这些
+            - 3个短要点:
             """
         case "Traditional Chinese":
             return """
             # {使用者的原文}
 
-            ## 1. 原語言和翻譯
-            - 原語言:
-            - 繁體中文翻譯:
-            - 語氣和細微差別:
+            ## 1. 先看意思
+            - 簡單說法:
+            - 自然的繁體中文:
+            - 自然的英語（用來學）:
+            - 什麼時候用:
+            - 隨興 / 正式:
 
-            ## 2. 文法和結構
+            ## 2. 發音重點
+            - 重讀的部分:
+            - 發音提示:
+
+            ## 3. 怎麼組成
             - 類型: 單字 / 片語 / 句子
-            - 詞性或句型:
-            - 主詞、動詞、受詞、補語:
-            - 修飾關係:
-            - 時態、助詞、助動詞、語序、屈折變化、介詞、關係子句或其他重點文法:
-            - 如果是越南語，請視需要說明聲調、量詞、小品詞、語序、體標記、代名詞和語體:
+            - 依原文順序拆開（「原文」= 簡單意思）:
+            - 可以套用的句型:
 
-            ## 3. 重點詞彙
-            - 從原文中說明3到6個重要單字或片語:
-            - 必要時加入羅馬字或發音說明:
+            ## 4. 文法說明
+            - 時態 / 形式（現在 / 過去 / 進行等）:
+            - 冠詞（a / an / the / 不用）:
+            - 介詞:
+            - 這句裡其他重要文法（可數/不可數、動詞形式、助動詞、關係子句等）:
+            - 為什麼用這個形式（用原文的詞，並和相近形式對比）:
 
-            ## 4. 用法和例句
-            - 原語言例句1:
-            - 繁體中文意思:
-            - 原語言例句2:
-            - 繁體中文意思:
+            ## 5. 要記住的詞
+            - 2到5個。每項: 簡單意思 / 常一起出現的詞:
 
-            ## 5. 容易混淆的點
-            - 發音、用法、文法、語體或相似表達的差異:
+            ## 6. 可以這樣說
+            - 例句1（學習部分加粗）:
+            - 意思:
+            - 例句2:
+            - 意思:
 
-            ## 6. 記憶重點
-            - 用3到5條簡短要點總結:
+            ## 7. 容易搞混
+            - 和相近說法的差別:
+            - 學習者常犯的錯:
+
+            ## 8. 只記這些
+            - 3個短要點:
             """
         case "French":
             return """
             # {texte original de l'utilisateur}
 
-            ## 1. Langue source et traduction
-            - Langue source:
-            - Traduction en français:
-            - Nuance:
+            ## 1. D'abord le sens
+            - En mots simples:
+            - Traduction naturelle en français:
+            - Anglais naturel (à apprendre):
+            - Quand l'utiliser:
+            - Familier / formel:
 
-            ## 2. Grammaire et structure
+            ## 2. Comment ça se prononce
+            - Accent (syllabe forte):
+            - Conseil de prononciation:
+
+            ## 3. Comment c'est construit
             - Type: mot / groupe de mots / phrase
-            - Nature grammaticale ou modèle de phrase:
-            - Sujet, verbe, objet, complément:
-            - Modificateurs:
-            - Temps, particules, auxiliaires, ordre des mots, flexion, prépositions, propositions relatives ou autre point de grammaire important:
-            - Pour le vietnamien, expliquer les tons, classificateurs, particules, ordre des mots, marqueurs d'aspect, pronoms et registre si pertinent:
+            - Morceau par morceau (dans l'ordre du texte):
+            - Un modèle à réutiliser:
 
-            ## 3. Vocabulaire clé
-            - Expliquer 3 à 6 mots ou expressions importants du texte source:
-            - Ajouter une romanisation ou des notes de prononciation si utile:
+            ## 4. Grammaire
+            - Temps / forme (présent / passé / en cours...):
+            - Articles (a / an / the / aucun):
+            - Prépositions:
+            - Autre grammaire dans ce texte (comptable / non comptable, forme du verbe, auxiliaires, relatives...):
+            - Pourquoi cette forme (avec les mots du texte, et un court contraste):
 
-            ## 4. Usage et exemples
-            - Exemple 1 dans la langue source:
-            - Sens en français:
-            - Exemple 2 dans la langue source:
-            - Sens en français:
+            ## 5. Mots utiles
+            - 2 à 5 items: sens facile / mots qui vont souvent ensemble:
 
-            ## 5. Points souvent confondus
-            - Prononciation, usage, grammaire, registre ou différences avec des expressions proches:
+            ## 6. Exemples à essayer
+            - Exemple 1 (mettre en gras le point à apprendre):
+            - Sens:
+            - Exemple 2:
+            - Sens:
 
-            ## 6. Points à retenir
-            - Résumer les points essentiels en 3 à 5 puces courtes:
+            ## 7. Facile à confondre
+            - Différence avec une expression proche:
+            - Erreur fréquente des apprenants:
+
+            ## 8. À retenir
+            - 3 points courts:
             """
         case "Spanish":
             return """
             # {texto original del usuario}
 
-            ## 1. Idioma de origen y traducción
-            - Idioma de origen:
-            - Traducción al español:
-            - Matiz:
+            ## 1. Primero el significado
+            - En palabras fáciles:
+            - Traducción natural al español:
+            - Inglés natural (para aprender):
+            - Cuándo usarlo:
+            - Informal / formal:
 
-            ## 2. Gramática y estructura
+            ## 2. Cómo suena
+            - Acento (sílaba fuerte):
+            - Consejo de pronunciación:
+
+            ## 3. Cómo está construido
             - Tipo: palabra / frase / oración
-            - Categoría gramatical o patrón de oración:
-            - Sujeto, verbo, objeto, complemento:
-            - Modificadores:
-            - Tiempo verbal, partículas, auxiliares, orden de palabras, flexión, preposiciones, oraciones relativas u otra gramática clave:
-            - Para vietnamita, explicar tonos, clasificadores, partículas, orden de palabras, marcadores de aspecto, pronombres y registro cuando sea relevante:
+            - Trozo a trozo (en el mismo orden del texto):
+            - Un patrón para reutilizar:
 
-            ## 3. Vocabulario clave
-            - Explicar de 3 a 6 palabras o expresiones importantes del texto original:
-            - Añadir romanización o notas de pronunciación cuando sea útil:
+            ## 4. Gramática
+            - Tiempo / forma (presente / pasado / en curso...):
+            - Artículos (a / an / the / ninguno):
+            - Preposiciones:
+            - Otra gramática de este texto (contable / incontable, forma del verbo, auxiliares, oraciones de relativo...):
+            - Por qué se usa esta forma (con las palabras del texto y un contraste breve):
 
-            ## 4. Uso y ejemplos
-            - Ejemplo 1 en el idioma de origen:
-            - Significado en español:
-            - Ejemplo 2 en el idioma de origen:
-            - Significado en español:
+            ## 5. Palabras útiles
+            - 2 a 5 ítems: significado fácil / palabras que suelen ir juntas:
 
-            ## 5. Puntos que suelen causar confusión
-            - Pronunciación, uso, gramática, registro o diferencias con expresiones similares:
+            ## 6. Prueba estos ejemplos
+            - Ejemplo 1 (en negrita lo que hay que aprender):
+            - Significado:
+            - Ejemplo 2:
+            - Significado:
 
-            ## 6. Puntos clave
-            - Resumir lo más importante en 3 a 5 viñetas breves:
+            ## 7. Fácil de confundir
+            - Diferencia con una expresión parecida:
+            - Error frecuente de quienes aprenden:
+
+            ## 8. Recuerda
+            - 3 puntos cortos:
             """
         case "German":
             return """
             # {Originaltext des Benutzers}
 
-            ## 1. Ausgangssprache und Übersetzung
-            - Ausgangssprache:
-            - Deutsche Übersetzung:
-            - Nuance:
+            ## 1. Zuerst die Bedeutung
+            - In einfachen Worten:
+            - Natürliche deutsche Übersetzung:
+            - Natürliches Englisch (zum Lernen):
+            - Wann man es sagt:
+            - Locker / förmlich:
 
-            ## 2. Grammatik und Struktur
+            ## 2. Aussprache
+            - Betonte Silbe:
+            - Aussprachetipp:
+
+            ## 3. So ist es gebaut
             - Typ: Wort / Phrase / Satz
-            - Wortart oder Satzmuster:
-            - Subjekt, Verb, Objekt, Ergänzung:
-            - Modifikatoren:
-            - Tempus, Partikeln, Hilfsverben, Wortstellung, Flexion, Präpositionen, Relativsätze oder andere wichtige Grammatik:
-            - Bei Vietnamesisch nach Bedarf Töne, Klassifikatoren, Partikeln, Wortstellung, Aspektmarker, Pronomen und Register erklären:
+            - Stück für Stück (in der Reihenfolge des Texts):
+            - Ein Muster zum Wiederverwenden:
 
-            ## 3. Wichtiger Wortschatz
-            - 3 bis 6 wichtige Wörter oder Ausdrücke aus dem Originaltext erklären:
-            - Bei Bedarf Romanisierung oder Aussprachehinweise hinzufügen:
+            ## 4. Grammatik
+            - Zeitform (jetzt / Vergangenheit / Verlauf...):
+            - Artikel (a / an / the / keiner):
+            - Präpositionen:
+            - Weitere Grammatik in diesem Text (zählbar / unzählbar, Verbform, Hilfsverben, Relativsätze...):
+            - Warum diese Form (mit den Wörtern aus dem Text und einem kurzen Vergleich):
 
-            ## 4. Verwendung und Beispiele
-            - Beispiel 1 in der Ausgangssprache:
-            - Bedeutung auf Deutsch:
-            - Beispiel 2 in der Ausgangssprache:
-            - Bedeutung auf Deutsch:
+            ## 5. Nützliche Wörter
+            - 2 bis 5 Einträge: einfache Bedeutung / Wörter, die oft dazugehören:
 
-            ## 5. Häufige Stolperstellen
-            - Aussprache, Verwendung, Grammatik, Register oder Unterschiede zu ähnlichen Ausdrücken:
+            ## 6. Beispiele zum Ausprobieren
+            - Beispiel 1 (Lernstelle fett):
+            - Bedeutung:
+            - Beispiel 2:
+            - Bedeutung:
 
-            ## 6. Merkpunkte
-            - Die wichtigsten Punkte in 3 bis 5 kurzen Stichpunkten zusammenfassen:
+            ## 7. Leicht zu verwechseln
+            - Unterschied zu einer ähnlichen Wendung:
+            - Typischer Fehler von Lernenden:
+
+            ## 8. Merken
+            - 3 kurze Punkte:
             """
         default:
             return """
             # {the user's original text}
 
-            ## 1. Source Language and Translation
-            - Source language:
-            - Translation in \(language):
-            - Nuance:
+            ## 1. Simple meaning
+            - In easy words:
+            - Natural translation in \(language):
+            - Natural English to remember:
+            - When to use it:
+            - Casual or formal:
 
-            ## 2. Grammar and Structure
+            ## 2. How it sounds
+            - Stress (CAPITALS on the strong part):
+            - Pronunciation tip:
+
+            ## 3. How it is built
             - Type: word / phrase / sentence
-            - Part of speech or sentence pattern:
-            - Subject, verb, object, complement:
-            - Modifiers:
-            - Tense, particles, auxiliaries, word order, inflection, prepositions, relative clauses, or other key grammar:
-            - For Vietnamese, include tones, classifiers, particles, word order, aspect markers, pronouns, and register when relevant:
+            - Piece by piece (same order as the text; "original" = easy meaning):
+            - A pattern you can reuse:
 
-            ## 3. Key Vocabulary
-            - Explain 3 to 6 important words or phrases from the source text:
-            - Include romanization or pronunciation notes when useful:
+            ## 4. Grammar
+            - Tense / form (now / past / ongoing, etc.):
+            - Articles (a / an / the / none):
+            - Prepositions:
+            - Other grammar in this text (countable vs uncountable, verb form, auxiliaries, relative clauses, etc.):
+            - Why this form is used (with the original words, plus a short contrast):
 
-            ## 4. Usage and Examples
-            - Example 1 in the source language:
-            - Meaning in \(language):
-            - Example 2 in the source language:
-            - Meaning in \(language):
+            ## 5. Useful words
+            - 2 to 5 items: easy meaning / words that often go with it:
 
-            ## 5. Common Pitfalls
-            - Explain important pronunciation, usage, grammar, register, or differences from similar expressions:
+            ## 6. Try these
+            - Example 1 (bold the part to learn):
+            - Meaning:
+            - Example 2:
+            - Meaning:
 
-            ## 6. Key Takeaways
-            - Summarize the most important points in 3 to 5 short bullets:
+            ## 7. Easy to mix up
+            - Similar expression vs this one:
+            - Common learner mistake:
+
+            ## 8. Remember
+            - 3 short points:
             """
         }
     }

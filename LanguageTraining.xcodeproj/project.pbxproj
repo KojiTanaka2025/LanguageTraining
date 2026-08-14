@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EB9FB3882F972660000CDBC1 /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = EB9FB3872F972660000CDBC1 /* .gitignore */; };
-		EBC32D7D2F972BE6004E7B04 /* AppIconGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC32D7C2F972BE6004E7B04 /* AppIconGenerator.swift */; };
 		EBC32D7F2F973414004E7B04 /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC32D7E2F973414004E7B04 /* DataManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -19,9 +17,25 @@
 		EBC32D7E2F973414004E7B04 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EBC32D802F980001004E7B04 /* Exceptions for "LanguageTraining" folder in "LanguageTraining" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				NETWORK_TROUBLESHOOTING.md,
+				QUICKSTART.md,
+				README.md,
+			);
+			target = EBC13AFF2F6C0A2C00D327AC /* LanguageTraining */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EBC13B022F6C0A2C00D327AC /* LanguageTraining */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EBC32D802F980001004E7B04 /* Exceptions for "LanguageTraining" folder in "LanguageTraining" target */,
+			);
 			path = LanguageTraining;
 			sourceTree = "<group>";
 		};
@@ -121,7 +135,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EB9FB3882F972660000CDBC1 /* .gitignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,7 +146,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				EBC32D7F2F973414004E7B04 /* DataManager.swift in Sources */,
-				EBC32D7D2F972BE6004E7B04 /* AppIconGenerator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,17 +286,21 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LanguageTraining/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026. All rights reserved.";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.LanguageTraining.LanguageTraining;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = LanguageTraining;
 				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -306,19 +322,23 @@
 				DEVELOPMENT_TEAM = 2B8WL876T9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_PREVIEWS = YES;
+				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LanguageTraining/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026. All rights reserved.";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.LanguageTraining.LanguageTraining;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = LanguageTraining;
 				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

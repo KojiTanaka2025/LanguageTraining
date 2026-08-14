@@ -17,114 +17,71 @@ struct LibraryView: View {
     @State private var audioErrorMessage: String?
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 検索バー
-            HStack(spacing: 12) {
-                TextField("Search words, text, or explanations", text: $query)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 420)
+        NavigationStack {
+            Group {
+                if store.cards.isEmpty, let loadError = store.loadErrorMessage {
+                    emptyState(
+                        icon: "exclamationmark.triangle",
+                        title: "Library could not be loaded",
+                        message: loadError,
+                        showsRetry: true
+                    )
+                } else if filtered.isEmpty && !query.isEmpty {
+                    emptyState(
+                        icon: "magnifyingglass",
+                        title: "No results",
+                        message: "Try a different keyword."
+                    )
+                } else if store.cards.isEmpty {
+                    emptyState(
+                        icon: "tray",
+                        title: "No cards yet",
+                        message: "Create a card from the Explain tab."
+                    )
+                } else {
+                    HSplitView {
+                        cardList
+                            .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
 
-                Spacer()
-
-                Text("\(filtered.count) cards")
-                    .foregroundStyle(.secondary)
-            }
-            .padding(16)
-
-            Divider()
-
-            // メインコンテンツエリア
-            if store.cards.isEmpty, let loadError = store.loadErrorMessage {
-                VStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 42))
-                        .foregroundStyle(.orange)
-                    Text("Library could not be loaded")
-                        .font(.title3)
-                        .bold()
-                    Text(loadError)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: 420)
-                    Button("Retry") {
-                        store.reloadData()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if filtered.isEmpty && !query.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 42))
-                        .foregroundStyle(.secondary)
-                    Text("No results found")
-                        .font(.title3)
-                        .bold()
-                    Text("Try a different keyword.")
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.cards.isEmpty {
-                // カードが空
-                VStack(spacing: 12) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 42))
-                        .foregroundStyle(.secondary)
-                    Text("No cards yet")
-                        .font(.title3)
-                        .bold()
-                    Text("Use the Explain tab to create cards from text in any language, including Vietnamese.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 420)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                // 左右分割レイアウト
-                HSplitView {
-                    // 左ペイン: カード一覧
-                    VStack(spacing: 0) {
-                        List(selection: $selected) {
-                            ForEach(filtered) { card in
-                                CardRow(card: card)
-                                    .tag(card.id)
-                                    .contentShape(Rectangle())
-                                    .contextMenu {
-                                        Button("Delete", role: .destructive) {
-                                            cardPendingDeletion = card
-                                        }
-                                    }
-                            }
+                        if let selectedCard = filtered.first(where: { $0.id == selected }) {
+                            CardDetailPane(
+                                card: selectedCard,
+                                isLoadingAudio: $isLoadingAudio,
+                                audioErrorMessage: $audioErrorMessage,
+                                onPlayAudio: { playPronunciation(for: selectedCard) }
+                            )
+                        } else {
+                            emptyState(
+                                icon: "sidebar.left",
+                                title: "Select a card",
+                                message: "Choose a card from the list to review it."
+                            )
+                            .background(Color(nsColor: .textBackgroundColor))
                         }
-                        .listStyle(.sidebar)
-                    }
-                    .frame(minWidth: 300, idealWidth: 350, maxWidth: 500)
-                    
-                    // 右ペイン: 詳細表示
-                    if let selectedCard = filtered.first(where: { $0.id == selected }) {
-                        CardDetailPane(
-                            card: selectedCard,
-                            isLoadingAudio: $isLoadingAudio,
-                            audioErrorMessage: $audioErrorMessage,
-                            onPlayAudio: { playPronunciation(for: selectedCard) }
-                        )
-                    } else {
-                        // 未選択時のプレースホルダー
-                        VStack(spacing: 16) {
-                            Image(systemName: "hand.point.left.fill")
-                                .font(.system(size: 48))
-                                .foregroundStyle(.tertiary)
-                            Text("Select a card from the list.")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(nsColor: .textBackgroundColor))
                     }
                 }
             }
-            
-            // エラーメッセージ
+            .navigationTitle("Library")
+            .searchable(text: $query, prompt: "Search cards")
+            .toolbar {
+                ToolbarItem(placement: .status) {
+                    Text(cardCountLabel)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onAppear {
+                selectFirstAvailableCard()
+            }
+            .onChange(of: filtered.map(\.id)) { _, _ in
+                selectFirstAvailableCard()
+            }
+            .onDeleteCommand {
+                if let card = filtered.first(where: { $0.id == selected }) {
+                    cardPendingDeletion = card
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
             if let errorMessage {
                 HStack {
                     Text(errorMessage)
@@ -136,19 +93,77 @@ struct LibraryView: View {
                     }
                 }
                 .padding(12)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(.bar)
             }
         }
-        .alert(item: $cardPendingDeletion) { card in
-            Alert(
-                title: Text("Delete this card?"),
-                message: Text("This will delete \"\(card.sourceText.replacingOccurrences(of: "\n", with: " "))\". This action cannot be undone."),
-                primaryButton: .destructive(Text("Delete")) {
+        .alert("Delete this card?", isPresented: Binding(
+            get: { cardPendingDeletion != nil },
+            set: { if !$0 { cardPendingDeletion = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                if let card = cardPendingDeletion {
                     deleteCard(card)
-                },
-                secondaryButton: .cancel(Text("Cancel"))
-            )
+                }
+                cardPendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                cardPendingDeletion = nil
+            }
+        } message: {
+            if let card = cardPendingDeletion {
+                Text("This will delete “\(card.sourceText.replacingOccurrences(of: "\n", with: " "))”. This cannot be undone.")
+            }
         }
+    }
+
+    private var cardCountLabel: String {
+        let total = store.cards.count
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return total == 1 ? "1 card" : "\(total) cards"
+        }
+        return "\(filtered.count) of \(total)"
+    }
+
+    private var cardList: some View {
+        List(selection: $selected) {
+            ForEach(filtered) { card in
+                CardRow(card: card)
+                    .tag(card.id)
+                    .contextMenu {
+                        Button("Copy Text") {
+                            copySourceText(card.sourceText)
+                        }
+                        Button("Delete", role: .destructive) {
+                            cardPendingDeletion = card
+                        }
+                    }
+            }
+        }
+        .listStyle(.sidebar)
+    }
+
+    private func emptyState(icon: String, title: String, message: String, showsRetry: Bool = false) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 32))
+                .foregroundStyle(.tertiary)
+            Text(title)
+                .font(.title3)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .textSelection(.enabled)
+                .frame(maxWidth: 380)
+            if showsRetry {
+                Button("Retry") {
+                    store.reloadData()
+                }
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(40)
     }
 
     private var filtered: [Card] {
@@ -168,6 +183,17 @@ struct LibraryView: View {
         } catch {
             errorMessage = "Failed to delete the card: \(error.localizedDescription)"
         }
+    }
+
+    private func selectFirstAvailableCard() {
+        if selected == nil || !filtered.contains(where: { $0.id == selected }) {
+            selected = filtered.first?.id
+        }
+    }
+
+    private func copySourceText(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
     
     private func playPronunciation(for card: Card) {
@@ -238,46 +264,37 @@ private struct CardDetailPane: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // ヘッダー
-            HStack {
+            HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Label("Original Text", systemImage: "textformat.abc")
+                    Text("Source")
                         .font(.headline)
-                        .foregroundStyle(.blue)
-                    
-                    Text("Created: \(card.createdAt.formatted(date: .long, time: .shortened))")
+                    Text(card.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
-                // 音声再生ボタン
-                Button(action: onPlayAudio) {
-                    HStack(spacing: 6) {
+
+                Button(action: toggleAudio) {
+                    Label {
+                        Text(audioButtonTitle)
+                    } icon: {
                         if isLoadingAudio {
                             ProgressView()
                                 .controlSize(.small)
-                                .frame(width: 16, height: 16)
-                        } else if audioPlayer.isPlaying && audioPlayer.currentText == card.sourceText {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .foregroundStyle(.blue)
                         } else {
-                            Image(systemName: card.audioFileName != nil ? "speaker.wave.2.fill" : "speaker.wave.2")
+                            Image(systemName: audioButtonSymbol)
                         }
-                        Text(card.audioFileName != nil ? "Play Audio" : "Generate Audio")
-                            .font(.callout)
                     }
                 }
-                .disabled(isLoadingAudio || (audioPlayer.isPlaying && audioPlayer.currentText == card.sourceText))
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .disabled(isLoadingAudio)
+                .help(isPlayingThisCard ? "Stop playback" : "Play pronunciation")
             }
-            .padding(20)
-            
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+
             Divider()
-            
-            // 英文表示
+
             ScrollView {
                 Text(card.sourceText)
                     .font(.title3)
@@ -285,15 +302,10 @@ private struct CardDetailPane: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
             }
-            .frame(height: 100)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
+            .frame(minHeight: 72, maxHeight: 140)
             .padding(.horizontal, 20)
             .padding(.top, 12)
-            
-            // エラーメッセージ
+
             if let audioErrorMessage {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -306,28 +318,44 @@ private struct CardDetailPane: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
             }
-            
+
             Divider()
-                .padding(.vertical, 16)
-            
-            // Markdown解説
+                .padding(.top, 12)
+
             VStack(alignment: .leading, spacing: 8) {
-                Label("AI Explanation", systemImage: "sparkles")
+                Text("Explanation")
                     .font(.headline)
-                    .foregroundStyle(.purple)
                     .padding(.horizontal, 20)
-                
+                    .padding(.top, 12)
+
                 FormattedMarkdownView(markdown: card.markdown)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                    .background(Color(nsColor: .textBackgroundColor))
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+    }
+
+    private var isPlayingThisCard: Bool {
+        audioPlayer.isPlaying && audioPlayer.currentText == card.sourceText
+    }
+
+    private var audioButtonTitle: String {
+        if isPlayingThisCard { return "Stop" }
+        return card.audioFileName != nil ? "Play" : "Generate Audio"
+    }
+
+    private var audioButtonSymbol: String {
+        if isPlayingThisCard { return "stop.fill" }
+        return card.audioFileName != nil ? "speaker.wave.2.fill" : "speaker.wave.2"
+    }
+
+    private func toggleAudio() {
+        if isPlayingThisCard {
+            audioPlayer.stop()
+        } else {
+            onPlayAudio()
+        }
     }
 }
 
@@ -337,27 +365,23 @@ private struct CardRow: View {
     let card: Card
 
     var body: some View {
-        HStack(spacing: 8) {
-            // 音声アイコン（音声がある場合のみ表示）
-            if card.audioFileName != nil {
-                Image(systemName: "speaker.wave.2.fill")
-                    .foregroundStyle(.blue)
-                    .font(.caption)
-                    .help("Audio saved")
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(card.sourceText.replacingOccurrences(of: "\n", with: " "))
+                    .font(.body)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if card.audioFileName != nil {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.caption2)
+                        .help("Audio saved")
+                }
             }
-            
-            // 英文・単語
-            Text(card.sourceText.replacingOccurrences(of: "\n", with: " "))
-                .font(.body)
-                .lineLimit(1)
-            
-            Spacer()
-            
-            // 作成日時
-            Text(card.createdAt, style: .date)
-                .foregroundStyle(.secondary)
+            Text(card.createdAt, format: .relative(presentation: .named))
                 .font(.caption)
+                .foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
