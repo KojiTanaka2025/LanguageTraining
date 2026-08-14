@@ -12,8 +12,7 @@ struct LibraryView: View {
     @State private var errorMessage: String?
     @State private var cardPendingDeletion: Card?
     
-    // 音声再生用
-    @StateObject private var audioPlayer = AudioPlayerService.shared
+    @ObservedObject private var audioPlayer = AudioPlayerService.shared
     @State private var isLoadingAudio = false
     @State private var audioErrorMessage: String?
 
@@ -35,8 +34,25 @@ struct LibraryView: View {
             Divider()
 
             // メインコンテンツエリア
-            if filtered.isEmpty && !query.isEmpty {
-                // 検索結果なし
+            if store.cards.isEmpty, let loadError = store.loadErrorMessage {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 42))
+                        .foregroundStyle(.orange)
+                    Text("Library could not be loaded")
+                        .font(.title3)
+                        .bold()
+                    Text(loadError)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: 420)
+                    Button("Retry") {
+                        store.reloadData()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filtered.isEmpty && !query.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 42))
@@ -158,14 +174,20 @@ struct LibraryView: View {
         Task {
             isLoadingAudio = true
             audioErrorMessage = nil
+
+            let current = store.cards.first(where: { $0.id == card.id }) ?? card
             
             do {
-                // 保存済みの音声があればそれを再生
-                if let audioURL = card.audioFileURL(),
+                if let audioURL = current.audioFileURL(),
                    FileManager.default.fileExists(atPath: audioURL.path) {
-                    try audioPlayer.play(fileURL: audioURL, text: card.sourceText, deleteAfterPlay: false)
+                    try audioPlayer.play(fileURL: audioURL, text: current.sourceText, deleteAfterPlay: false)
                 } else {
-                    // 音声がない場合は新規生成
+                    guard !settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        audioErrorMessage = "API key is not set. Open Settings and enter your API key."
+                        isLoadingAudio = false
+                        return
+                    }
+
                     guard let baseURL = URL(string: settings.openAIBaseURL) else {
                         throw OpenAIError.invalidBaseURL
                     }
@@ -177,12 +199,20 @@ struct LibraryView: View {
                     )
                     
                     let audioURL = try await client.textToSpeech(
-                        text: card.sourceText,
+                        text: current.sourceText,
                         voice: OpenAIClient.defaultTTSVoice,
                         speed: 0.9
                     )
-                    
-                    try audioPlayer.play(fileURL: audioURL, text: card.sourceText, deleteAfterPlay: true)
+
+                    let fileName = try store.saveAudioFile(from: audioURL, for: current.id)
+                    var updated = current
+                    updated.audioFileName = fileName
+                    try store.updateCard(updated)
+                    try? FileManager.default.removeItem(at: audioURL)
+
+                    if let savedURL = updated.audioFileURL() {
+                        try audioPlayer.play(fileURL: savedURL, text: updated.sourceText, deleteAfterPlay: false)
+                    }
                 }
                 
             } catch let error as OpenAIError {
@@ -204,7 +234,7 @@ private struct CardDetailPane: View {
     @Binding var audioErrorMessage: String?
     let onPlayAudio: () -> Void
     
-    @StateObject private var audioPlayer = AudioPlayerService.shared
+    @ObservedObject private var audioPlayer = AudioPlayerService.shared
     
     var body: some View {
         VStack(spacing: 0) {

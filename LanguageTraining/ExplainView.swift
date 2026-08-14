@@ -15,10 +15,11 @@ struct ExplainView: View {
     @State private var didSave = false
     
     // 音声再生関連
-    @StateObject private var audioPlayer = AudioPlayerService.shared
+    @ObservedObject private var audioPlayer = AudioPlayerService.shared
     @State private var isLoadingAudio = false
     @State private var audioErrorMessage: String?
-    @State private var lastGeneratedAudioURL: URL? // 最後に生成した音声の一時URL
+    @State private var lastGeneratedAudioURL: URL?
+    @State private var lastGeneratedAudioText: String?
     @State private var saveAudioWithCard = true // 音声をカードに保存するか
     
     // 初回起動フラグ
@@ -35,13 +36,24 @@ struct ExplainView: View {
                             .frame(minHeight: 72, idealHeight: 96, maxHeight: 120)
 
                         HStack {
-                            Button("Load Clipboard and Explain") {
+                            Button("Load Clipboard") {
+                                loadClipboardOnly()
+                            }
+                            .disabled(isLoading || isLoadingAudio)
+                            .help("Replace the text field with the current clipboard contents")
+
+                            Button("Explain") {
                                 Task {
-                                    await loadAndExplain()
+                                    await explainCurrentText()
                                 }
                             }
                             .keyboardShortcut(.return, modifiers: [.command])
-                            .disabled(isLoading || isLoadingAudio)
+                            .disabled(
+                                clipboardText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                                isLoading ||
+                                isLoadingAudio
+                            )
+                            .help("Generate an explanation from the text in the editor")
                             
                             // 音声再生ボタン
                             Button(action: playPronunciation) {
@@ -209,44 +221,38 @@ struct ExplainView: View {
         }
     }
     
-    /// クリップボードから読み込んで、音声と解説を並行取得
-    private func loadAndExplain() async {
+    /// エディタの本文から音声と解説を並行取得
+    private func explainCurrentText() async {
         didSave = false
         errorMessage = nil
         audioErrorMessage = nil
-        
-        // 古い一時音声ファイルをクリーンアップ
-        cleanupTempAudio()
-        
-        // クリップボードから読み込み
-        let pb = NSPasteboard.general
-        guard let text = pb.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !text.isEmpty else {
-            clipboardText = ""
-            return
+
+        let text = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        if lastGeneratedAudioText != text {
+            cleanupTempAudio()
         }
         
-        clipboardText = text
-        
-        // APIキーチェック
         guard !settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             errorMessage = "API key is not set. Open Settings and enter your API key."
             return
         }
         
-        // 音声と解説を並行取得
         isLoading = true
-        isLoadingAudio = true
+        let needsNewAudio = matchingGeneratedAudioURL(for: text) == nil
+        if needsNewAudio {
+            isLoadingAudio = true
+        }
         
-        async let audioTask: URL? = fetchAudio(text: text)
+        async let audioTask: URL? = audioURL(for: text)
         async let explanationTask: String? = fetchExplanationText(text: text)
         
         let (audio, explanation) = await (audioTask, explanationTask)
         
-        // 結果を反映
         if let audio = audio {
             lastGeneratedAudioURL = audio
-            // 音声を自動再生
+            lastGeneratedAudioText = text
             try? audioPlayer.play(fileURL: audio, text: text, deleteAfterPlay: false)
         }
         
@@ -258,6 +264,14 @@ struct ExplainView: View {
         isLoadingAudio = false
     }
     
+    /// 一致する生成済み音声があればそれを返し、なければ新規生成する
+    private func audioURL(for text: String) async -> URL? {
+        if let existing = matchingGeneratedAudioURL(for: text) {
+            return existing
+        }
+        return await fetchAudio(text: text)
+    }
+
     /// 音声を取得（エラーは内部でハンドリング）
     private func fetchAudio(text: String) async -> URL? {
         do {
@@ -294,6 +308,16 @@ struct ExplainView: View {
             try? FileManager.default.removeItem(at: tempURL)
             lastGeneratedAudioURL = nil
         }
+        lastGeneratedAudioText = nil
+    }
+
+    private func matchingGeneratedAudioURL(for text: String) -> URL? {
+        guard lastGeneratedAudioText == text,
+              let existing = lastGeneratedAudioURL,
+              FileManager.default.fileExists(atPath: existing.path) else {
+            return nil
+        }
+        return existing
     }
 
     private func client() throws -> OpenAIClient {
@@ -314,9 +338,8 @@ struct ExplainView: View {
             
             // 音声保存オプションが有効な場合
             if saveAudioWithCard {
-                // 既に生成済みの音声があればそれを使用、なければ新規生成
                 let audioURL: URL
-                if let existing = lastGeneratedAudioURL {
+                if let existing = matchingGeneratedAudioURL(for: source) {
                     audioURL = existing
                 } else {
                     audioURL = try await client().textToSpeech(
@@ -324,6 +347,8 @@ struct ExplainView: View {
                         voice: OpenAIClient.defaultTTSVoice,
                         speed: 0.9
                     )
+                    lastGeneratedAudioURL = audioURL
+                    lastGeneratedAudioText = source
                 }
                 
                 // カードIDを生成
@@ -335,6 +360,7 @@ struct ExplainView: View {
                 // 一時ファイルを削除
                 try? FileManager.default.removeItem(at: audioURL)
                 lastGeneratedAudioURL = nil
+                lastGeneratedAudioText = nil
                 
                 // カードを保存（カスタムIDと音声ファイル名を指定）
                 let card = Card(
@@ -376,9 +402,7 @@ struct ExplainView: View {
             let text = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return }
             
-            // 既に音声が生成済みの場合は再生するだけ
-            if let existingAudio = lastGeneratedAudioURL,
-               FileManager.default.fileExists(atPath: existingAudio.path) {
+            if let existingAudio = matchingGeneratedAudioURL(for: text) {
                 try? audioPlayer.play(fileURL: existingAudio, text: text, deleteAfterPlay: false)
                 return
             }
@@ -395,8 +419,8 @@ struct ExplainView: View {
                     speed: 0.9
                 )
                 
-                // 一時URLを保存（後でカード保存時に使用）
                 lastGeneratedAudioURL = audioURL
+                lastGeneratedAudioText = text
                 
                 // 再生（一時ファイルは保存時まで保持するため削除しない）
                 try audioPlayer.play(fileURL: audioURL, text: text, deleteAfterPlay: false)

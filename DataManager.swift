@@ -131,31 +131,26 @@ struct DataManager {
             throw DataManagerError.invalidArchive
         }
         
-        // cards.xmlが存在するか確認
         let cardsXMLURL = resolvedImportedDataDir.appendingPathComponent("cards.xml", isDirectory: false)
         guard FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
             throw DataManagerError.noCardsFound
         }
 
         try validateImportedDataDirectory(resolvedImportedDataDir)
+
+        let data = try Data(contentsOf: cardsXMLURL)
+        let cards = try CardXMLCodec.decode(data: data)
         
-        // 既存データのバックアップを作成
         try await backupCurrentData()
         
-        // データをインポート
         let destinationDir = try AppStorage.dataDirectoryURL()
         
-        // 既存データを削除
         if FileManager.default.fileExists(atPath: destinationDir.path) {
             try FileManager.default.removeItem(at: destinationDir)
         }
         
-        // 新しいデータをコピー
         try FileManager.default.copyItem(at: resolvedImportedDataDir, to: destinationDir)
         
-        // インポートしたカード数を返す
-        let data = try Data(contentsOf: cardsXMLURL)
-        let cards = try CardXMLCodec.decode(data: data)
         return cards.count
     }
     
@@ -216,7 +211,19 @@ struct DataManager {
                 throw DataManagerError.unsafeArchive
             }
 
-            let relativePath = itemURL.path.replacingOccurrences(of: directory.path + "/", with: "")
+            let standardizedDir = directory.standardizedFileURL
+            let standardizedItem = itemURL.standardizedFileURL
+            let dirPath = standardizedDir.path.hasSuffix("/") ? standardizedDir.path : standardizedDir.path + "/"
+            guard standardizedItem == standardizedDir || standardizedItem.path.hasPrefix(dirPath) else {
+                throw DataManagerError.unsafeArchive
+            }
+
+            let relativePath = standardizedItem == standardizedDir
+                ? ""
+                : String(standardizedItem.path.dropFirst(dirPath.count))
+            if relativePath.isEmpty {
+                continue
+            }
             let filename = itemURL.lastPathComponent
             if filename == ".DS_Store" || filename.hasPrefix("._") {
                 continue
@@ -343,37 +350,36 @@ struct DataManager {
     // MARK: - ZIP操作（macOS標準コマンド使用）
     
     private static func createZipArchive(from sourceDir: URL, to destinationURL: URL) async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-        process.arguments = [
+        let status = try await runDitto(arguments: [
             "-c", "-k", "--sequesterRsrc", "--keepParent",
             sourceDir.path,
             destinationURL.path
-        ]
-        
-        try process.run()
-        process.waitUntilExit()
-        
-        guard process.terminationStatus == 0 else {
+        ])
+        guard status == 0 else {
             throw DataManagerError.zipFailed
         }
     }
     
     private static func extractZipArchive(from sourceURL: URL, to destinationDir: URL) async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
-        process.arguments = [
+        let status = try await runDitto(arguments: [
             "-x", "-k",
             sourceURL.path,
             destinationDir.path
-        ]
-        
-        try process.run()
-        process.waitUntilExit()
-        
-        guard process.terminationStatus == 0 else {
+        ])
+        guard status == 0 else {
             throw DataManagerError.unzipFailed
         }
+    }
+
+    private static func runDitto(arguments: [String]) async throws -> Int32 {
+        try await Task.detached(priority: .userInitiated) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+            process.arguments = arguments
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus
+        }.value
     }
 }
 
