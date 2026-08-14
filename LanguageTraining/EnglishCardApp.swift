@@ -8,45 +8,28 @@ struct LanguageTrainingApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        WindowGroup("LanguageTraining") {
+        Window("LanguageTraining", id: "main") {
             ContentView()
                 .environmentObject(store)
                 .environmentObject(settings)
                 .frame(minWidth: 980, minHeight: 640)
-                .onAppear {
-                    // ウィンドウのフレーム自動保存を設定
-                    configureWindowFrameAutosave()
-                }
         }
+        .defaultSize(width: 1100, height: 720)
+        .windowResizability(.contentMinSize)
         .commands {
-            CommandGroup(after: .appSettings) {
-                Button("Settings...") {
-                    settings.isSettingsPresented = true
-                }
-                .keyboardShortcut(",", modifiers: [.command])
-            }
+            CommandGroup(replacing: .newItem) {}
         }
-    }
-    
-    private func configureWindowFrameAutosave() {
-        // メインウィンドウを取得してフレーム自動保存名を設定
-        DispatchQueue.main.async {
-            if let window = NSApplication.shared.windows.first(where: { $0.title == "LanguageTraining" }) {
-                window.setFrameAutosaveName("LanguageTrainingMainWindow")
-            }
+
+        Settings {
+            SettingsView()
+                .environmentObject(store)
+                .environmentObject(settings)
         }
     }
 }
 
-// MARK: - AppDelegate
-
 class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        // すべてのウィンドウにフレーム自動保存を設定
-        for window in NSApplication.shared.windows {
-            if window.title == "LanguageTraining" {
-                window.setFrameAutosaveName("LanguageTrainingMainWindow")
-            }
-        }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 }

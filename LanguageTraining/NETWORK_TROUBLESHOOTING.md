@@ -39,12 +39,13 @@ In Build Settings, confirm:
 After rebuilding and launching the app:
 
 1. Open the Explain tab.
-2. Run the connection test if the UI exposes it.
-3. Review the result.
+2. Paste a short word such as `hello`.
+3. Click Explain.
+4. Review the result.
 
 Expected outcomes:
 
-- A successful server connection means networking is working. Check the API key if authentication fails.
+- An explanation means networking is working. Check the API key if authentication fails.
 - A DNS, timeout, or sandbox error means the network configuration still needs attention.
 
 ## Common Problems

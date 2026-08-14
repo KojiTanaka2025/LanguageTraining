@@ -1,9 +1,10 @@
 import SwiftUI
 import Combine
+import AppKit
 
 struct SettingsView: View {
+    @EnvironmentObject private var store: CardStore
     @EnvironmentObject private var settings: AppSettings
-    @Environment(\.dismiss) private var dismiss
 
     @State private var errorMessage: String?
     @State private var successMessage: String?
@@ -23,126 +24,112 @@ struct SettingsView: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Settings")
-                .font(.title2)
-                .bold()
+        Form {
+            Section("OpenAI") {
+                SecureField("API Key", text: $settings.apiKey)
+                    .textContentType(.password)
+                    .help("Saved in the macOS Keychain")
 
-            Form {
-                Section("OpenAI") {
-                    SecureField("API Key (saved in Keychain)", text: $settings.apiKey)
-                        .textContentType(.password)
+                TextField("Model", text: $settings.openAIModel)
 
-                    TextField("Model", text: $settings.openAIModel)
-
-                    Picker("Explanation Language", selection: $settings.explanationLanguage) {
-                        ForEach(explanationLanguages, id: \.self) { language in
-                            Text(language).tag(language)
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextField("Base URL", text: $settings.openAIBaseURL)
-                            .autocorrectionDisabled()
-                        
-                        Text("Example: https://api.openai.com")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        
-                        if let previewURL = constructedURL {
-                            Text("Resolved endpoint: \(previewURL)")
-                                .font(.caption)
-                                .foregroundStyle(.blue)
-                                .textSelection(.enabled)
-                        } else {
-                            Text("Invalid URL. Use an https URL.")
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        }
-
-                        if let baseURLWarning {
-                            Text(baseURLWarning)
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                                .textSelection(.enabled)
-                        }
+                Picker("Explanation Language", selection: $settings.explanationLanguage) {
+                    ForEach(explanationLanguages, id: \.self) { language in
+                        Text(language).tag(language)
                     }
                 }
-                
-                Section("Data Management") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Back up or share your learning card data.")
+
+                TextField("Base URL", text: $settings.openAIBaseURL)
+                    .autocorrectionDisabled()
+
+                Text("Default: https://api.openai.com")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let previewURL = constructedURL {
+                    LabeledContent("Endpoint") {
+                        Text(previewURL)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        
-                        HStack(spacing: 12) {
-                            Button(action: exportData) {
-                                Label(isExporting ? "Exporting..." : "Export Data", systemImage: "square.and.arrow.up")
-                            }
-                            .disabled(isExporting || isImporting)
-                            
-                            Button(action: importData) {
-                                Label(isImporting ? "Importing..." : "Import Data", systemImage: "square.and.arrow.down")
-                            }
-                            .disabled(isExporting || isImporting)
-                            
-                            Button(action: revealDataFolder) {
-                                Label("Show in Finder", systemImage: "folder")
-                            }
-                        }
-                        .buttonStyle(.bordered)
+                            .textSelection(.enabled)
                     }
+                } else {
+                    Text("Enter a valid https URL.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
-            }
-            .formStyle(.grouped)
 
-            if let errorMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .font(.callout)
+                if let baseURLWarning {
+                    Text(baseURLWarning)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                         .textSelection(.enabled)
                 }
             }
-            
-            if let successMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text(successMessage)
-                        .foregroundStyle(.green)
-                        .font(.callout)
+
+            Section("Library") {
+                Text("Export or import learning cards and audio as a ZIP archive. Import backs up existing data first.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    Button(action: exportData) {
+                        Label(isExporting ? "Exporting…" : "Export", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(isExporting || isImporting)
+
+                    Button(action: importData) {
+                        Label(isImporting ? "Importing…" : "Import", systemImage: "square.and.arrow.down")
+                    }
+                    .disabled(isExporting || isImporting)
+
+                    Button(action: revealDataFolder) {
+                        Label("Show in Finder", systemImage: "folder")
+                    }
                 }
             }
 
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
+            if let errorMessage {
+                Section {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
+            }
+
+            if let successMessage {
+                Section {
+                    Label(successMessage, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .frame(minWidth: 520, minHeight: 420)
+        .padding(8)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    do {
-                        guard constructedURL != nil else {
-                            errorMessage = "Base URL must be a valid https URL."
-                            return
-                        }
-                        try settings.save()
-                        dismiss()
-                    } catch {
-                        errorMessage = error.localizedDescription
-                    }
+                    saveSettings()
                 }
                 .keyboardShortcut(.defaultAction)
             }
-            
-            // デバッグ情報
-            Divider()
-            Text("Tip: You usually do not need to change the Base URL. The default value works for OpenAI.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .padding(20)
-        .frame(width: 600)
+    }
+
+    private func saveSettings() {
+        do {
+            guard constructedURL != nil else {
+                errorMessage = "Base URL must be a valid https URL."
+                successMessage = nil
+                return
+            }
+            try settings.save()
+            errorMessage = nil
+            successMessage = "Settings saved."
+        } catch {
+            successMessage = nil
+            errorMessage = error.localizedDescription
+        }
     }
     
     // MARK: - Actions
@@ -156,11 +143,8 @@ struct SettingsView: View {
             do {
                 let url = try await DataManager.exportAllData()
                 successMessage = "Exported: \(url.lastPathComponent)"
-                
-                // Finderで表示
                 NSWorkspace.shared.activateFileViewerSelecting([url])
             } catch DataManagerError.userCancelled {
-                // ユーザーがキャンセル - 何もしない
             } catch {
                 errorMessage = "Export failed: \(error.localizedDescription)"
             }
@@ -177,14 +161,9 @@ struct SettingsView: View {
             
             do {
                 let count = try await DataManager.importData()
+                store.reloadData()
                 successMessage = "Imported \(count) cards."
-                
-                // データを再読み込みするために画面を閉じる
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    dismiss()
-                }
             } catch DataManagerError.userCancelled {
-                // ユーザーがキャンセル - 何もしない
             } catch {
                 errorMessage = "Import failed: \(error.localizedDescription)"
             }
