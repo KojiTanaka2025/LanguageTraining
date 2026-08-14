@@ -81,6 +81,9 @@ struct SettingsView: View {
                 Text("On iPhone, tap Choose Folder, then Browse → iCloud Drive → LanguageTraining, and tap Open. You can also select iCloud Drive itself; the app will use a LanguageTraining folder inside it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Text("If both devices edit at the same time, the last save wins. After saving on one device, wait for iCloud Drive to finish syncing before editing on the other.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 Button("Choose Folder…") {
                     isPickingFolder = true
@@ -233,7 +236,9 @@ struct SettingsView: View {
             errorMessage = nil
             successMessage = nil
             do {
-                exportDocument = ExportedZipDocument(data: try LibraryArchive.exportZipData())
+                exportDocument = ExportedZipDocument(data: try await Task.detached(priority: .userInitiated) {
+                    try LibraryArchive.exportZipData()
+                }.value)
                 isExportingFile = true
             } catch {
                 errorMessage = "Export failed: \(error.localizedDescription)"
@@ -284,7 +289,9 @@ struct SettingsView: View {
         successMessage = nil
         do {
             let url = try result.get()
-            let count = try LibraryArchive.importZip(from: url)
+            let count = try await Task.detached(priority: .userInitiated) {
+                try LibraryArchive.importZip(from: url)
+            }.value
             store.reloadData()
             successMessage = "Imported \(count) cards."
         } catch {

@@ -16,7 +16,7 @@ enum CoordinatedFileError: LocalizedError {
 
 enum CoordinatedFile {
     static func readData(at url: URL) throws -> Data {
-        try ensureLocalCopy(at: url)
+        try ensureLocalCopyBlocking(at: url)
 
         var fileData: Data?
         var coordinatorError: NSError?
@@ -63,7 +63,7 @@ enum CoordinatedFile {
     }
 
     static func copyItem(at sourceURL: URL, to destinationURL: URL) throws {
-        try ensureLocalCopy(at: sourceURL)
+        try ensureLocalCopyBlocking(at: sourceURL)
         try FileManager.default.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
 
         var readError: NSError?
@@ -114,7 +114,47 @@ enum CoordinatedFile {
         }
     }
 
-    static func ensureLocalCopy(at url: URL) throws {
+    static func ensureLocalCopy(at url: URL) async throws {
+        try await waitForLocalCopy(at: url, sleep: {
+            try await Task.sleep(for: .milliseconds(150))
+        })
+    }
+
+    /// Waits on the current thread. Call only from a background task.
+    static func ensureLocalCopyBlocking(at url: URL) throws {
+        try waitForLocalCopyBlocking(at: url)
+    }
+
+    private static func waitForLocalCopy(at url: URL, sleep: () async throws -> Void) async throws {
+        let values = try url.resourceValues(forKeys: [
+            .isUbiquitousItemKey,
+            .ubiquitousItemDownloadingStatusKey
+        ])
+        guard values.isUbiquitousItem == true else { return }
+        if values.ubiquitousItemDownloadingStatus == URLUbiquitousItemDownloadingStatus.current {
+            return
+        }
+
+        try FileManager.default.startDownloadingUbiquitousItem(at: url)
+
+        let deadline = Date().addingTimeInterval(45)
+        while Date() < deadline {
+            let status = try url.resourceValues(forKeys: [
+                .ubiquitousItemDownloadingStatusKey,
+                .ubiquitousItemDownloadingErrorKey
+            ])
+            if let error = status.ubiquitousItemDownloadingError {
+                throw error
+            }
+            if status.ubiquitousItemDownloadingStatus == URLUbiquitousItemDownloadingStatus.current {
+                return
+            }
+            try await sleep()
+        }
+        throw CoordinatedFileError.downloadTimedOut
+    }
+
+    private static func waitForLocalCopyBlocking(at url: URL) throws {
         let values = try url.resourceValues(forKeys: [
             .isUbiquitousItemKey,
             .ubiquitousItemDownloadingStatusKey

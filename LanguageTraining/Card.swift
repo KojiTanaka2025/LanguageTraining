@@ -1,6 +1,6 @@
 import Foundation
 
-struct Card: Identifiable, Hashable {
+struct Card: Identifiable, Hashable, Sendable {
     let id: UUID
     let createdAt: Date
     var sourceText: String

@@ -19,6 +19,7 @@ final class CardStore: ObservableObject {
     @Published var lastLoadedAt: Date? = nil
     @Published private(set) var loadErrorMessage: String? = nil
     @Published private(set) var isUsingiCloud = false
+    @Published private(set) var isLoading = false
 
     private var hasLoaded = false
     private var canPersist = false
@@ -116,35 +117,30 @@ final class CardStore: ObservableObject {
     }
 
     private func loadLibrary() async {
+        isLoading = true
         do {
-            try await Task.detached(priority: .userInitiated) {
+            let snapshot = try await Task.detached(priority: .userInitiated) {
                 try AppStorage.prepare()
+                return try LibrarySnapshot.readFromDisk()
             }.value
-            try loadFromDisk()
-            isUsingiCloud = AppStorage.isUsingiCloud
+            apply(snapshot)
             startWatchingLibraryFile()
             startWatchingiCloudIdentity()
         } catch {
             canPersist = false
             loadErrorMessage = error.localizedDescription
         }
+        isLoading = false
     }
 
-    private func loadFromDisk() throws {
-        let url = try dataFileURL()
-        if FileManager.default.fileExists(atPath: url.path) {
-            let data = try CoordinatedFile.readData(at: url)
-            cards = try CardXMLCodec.decode(data: data)
-            lastPersistedData = data
-        } else {
-            cards = []
-            lastPersistedData = nil
-        }
+    private func apply(_ snapshot: LibrarySnapshot) {
+        cards = snapshot.cards
+        lastPersistedData = snapshot.persistedData
         lastLoadedAt = Date()
         loadErrorMessage = nil
         canPersist = true
         hasLoaded = true
-        isUsingiCloud = AppStorage.isUsingiCloud
+        isUsingiCloud = snapshot.isUsingiCloud
     }
 
     private func ensureCanPersist() throws {
@@ -171,7 +167,7 @@ final class CardStore: ObservableObject {
         guard let url = try? dataFileURL() else { return }
         let presenter = LibraryFilePresenter(url: url) { [weak self] in
             Task { @MainActor in
-                self?.reloadFromExternalChange()
+                await self?.reloadFromExternalChange()
             }
         }
         filePresenter = presenter
@@ -192,20 +188,42 @@ final class CardStore: ObservableObject {
         }
     }
 
-    private func reloadFromExternalChange() {
-        guard canPersist, let url = try? dataFileURL() else { return }
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
+    private func reloadFromExternalChange() async {
+        guard canPersist else { return }
         do {
-            let data = try CoordinatedFile.readData(at: url)
-            if data == lastPersistedData {
+            let snapshot = try await Task.detached(priority: .userInitiated) {
+                try LibrarySnapshot.readFromDisk()
+            }.value
+            if snapshot.persistedData == lastPersistedData {
                 return
             }
-            cards = try CardXMLCodec.decode(data: data)
-            lastPersistedData = data
+            cards = snapshot.cards
+            lastPersistedData = snapshot.persistedData
             lastLoadedAt = Date()
+            isUsingiCloud = snapshot.isUsingiCloud
         } catch {
             loadErrorMessage = error.localizedDescription
         }
+    }
+}
+
+private struct LibrarySnapshot: Sendable {
+    var cards: [Card]
+    var persistedData: Data?
+    var isUsingiCloud: Bool
+
+    static func readFromDisk() throws -> LibrarySnapshot {
+        let url = try AppStorage.dataDirectoryURL()
+            .appendingPathComponent("cards.xml", isDirectory: false)
+        if FileManager.default.fileExists(atPath: url.path) {
+            let data = try CoordinatedFile.readData(at: url)
+            return LibrarySnapshot(
+                cards: try CardXMLCodec.decode(data: data),
+                persistedData: data,
+                isUsingiCloud: AppStorage.isUsingiCloud
+            )
+        }
+        return LibrarySnapshot(cards: [], persistedData: nil, isUsingiCloud: AppStorage.isUsingiCloud)
     }
 }
 

@@ -86,6 +86,8 @@ Import backs up existing data here (this folder stays on the device):
 ~/Library/Application Support/LanguageTraining_Backups/
 ```
 
+The first launch after choosing an iCloud Drive folder may show “Loading library…” while files download. That wait runs in the background so the rest of the app stays responsive.
+
 ## Project Structure
 
 ```text
@@ -106,6 +108,10 @@ LanguageTraining/
 │   ├── AppStorage.swift
 │   ├── AudioPlayerService.swift
 │   ├── DocumentFolderPicker.swift
+│   ├── CoordinatedFile.swift
+│   ├── LibraryArchive.swift
+│   ├── PlatformSupport.swift
+│   ├── ZipArchive.swift
 │   ├── Keychain.swift
 │   └── Assets.xcassets
 ├── LanguageTrainingiOS/
@@ -118,9 +124,12 @@ LanguageTraining/
 └── README.md
 ```
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ## Notes
 
 - Do not commit API keys or local user data.
-- The repository is currently private, but this README is written with future public release in mind.
-- Licensing has not been finalized yet.
 - Signing uses an Apple Development certificate, which is enough for personal use on this Mac and on an iPhone registered to the same team.
+- If Mac and iPhone edit the library at the same time, the last saved `cards.xml` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.

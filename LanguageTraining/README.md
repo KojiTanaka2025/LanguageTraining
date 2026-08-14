@@ -39,6 +39,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 - Preserve compatibility with legacy EnglishCard exports
 - Back up existing data before import
 - Disable saving if the library file cannot be loaded, so `cards.xml` is not overwritten
+- Load the iCloud library in the background and show “Loading library…” instead of freezing the UI
 
 ## Technical Overview
 
@@ -51,6 +52,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 - Security: App Sandbox enabled on Mac, with outgoing network access and user-selected file access
 - Distribution: signed `.app` bundle for personal Mac use, installed with `scripts/install-app.sh`; iPhone builds use the `LanguageTraining iOS` scheme
 - iCloud: a personal development team cannot use the iCloud container capability, so both apps share an iCloud Drive folder instead
+- File coordination: iCloud downloads wait off the main thread, then the library snapshot is applied on the main actor
 
 ## Project Structure
 
@@ -63,6 +65,10 @@ LanguageTraining/
 ├── SettingsView.swift
 ├── FormattedMarkdownView.swift
 ├── DocumentFolderPicker.swift
+├── CoordinatedFile.swift
+├── LibraryArchive.swift
+├── PlatformSupport.swift
+├── ZipArchive.swift
 ├── Card.swift
 ├── CardStore.swift
 ├── AppSettings.swift
@@ -139,7 +145,7 @@ Backups stay on the device:
 - Custom API endpoints receive the same API key, so only use endpoints you trust.
 - Imported ZIP archives are validated, and `cards.xml` must decode successfully, before local data is replaced.
 - If the library file is damaged, the app shows an error and blocks saving so existing data is not overwritten.
-- If two devices edit the library at the same time, iCloud keeps the last written `cards.xml`. Avoid editing on both devices at once.
+- If two devices edit the library at the same time, iCloud keeps the last saved `cards.xml`. After saving on one device, wait for iCloud Drive to finish syncing before editing on the other.
 
 ## Future Ideas
 
