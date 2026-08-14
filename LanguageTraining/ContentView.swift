@@ -24,5 +24,29 @@ struct ContentView: View {
         .onAppear {
             store.loadIfNeeded()
         }
+        .safeAreaInset(edge: .bottom) {
+            if let message = store.loadErrorMessage {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Library could not be loaded")
+                            .font(.headline)
+                        Text(message)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                        Text("Saving is disabled so your existing cards.xml is not overwritten.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Retry") {
+                        store.reloadData()
+                    }
+                }
+                .padding(12)
+                .background(Color(nsColor: .controlBackgroundColor))
+            }
+        }
     }
 }

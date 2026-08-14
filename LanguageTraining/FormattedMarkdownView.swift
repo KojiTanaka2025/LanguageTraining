@@ -28,13 +28,24 @@ struct FormattedMarkdownView: NSViewRepresentable {
         
         return scrollView
     }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator {
+        var lastMarkdown: String?
+    }
     
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? NSTextView else {
             return
         }
+        guard context.coordinator.lastMarkdown != markdown else {
+            return
+        }
+        context.coordinator.lastMarkdown = markdown
         
-        // Markdownをフォーマット済みAttributedStringに変換
         let attributedString = formatMarkdown(markdown)
         textView.textStorage?.setAttributedString(attributedString)
     }

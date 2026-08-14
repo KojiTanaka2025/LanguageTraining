@@ -45,12 +45,9 @@ This app was originally named EnglishCard. Some legacy names remain in code and 
 LanguageTraining/
 ├── EnglishCardApp.swift
 ├── ContentView.swift
-├── AlternativeContentView.swift
 ├── ExplainView.swift
 ├── LibraryView.swift
-├── CardDetailView.swift
 ├── SettingsView.swift
-├── MarkdownTextView.swift
 ├── FormattedMarkdownView.swift
 ├── Card.swift
 ├── CardStore.swift
