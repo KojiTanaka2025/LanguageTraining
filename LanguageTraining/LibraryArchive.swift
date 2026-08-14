@@ -115,7 +115,7 @@ enum LibraryArchive {
         for case let itemURL as URL in enumerator {
             let values = try itemURL.resourceValues(forKeys: [.isRegularFileKey, .isUbiquitousItemKey])
             if values.isRegularFile == true, values.isUbiquitousItem == true {
-                try CoordinatedFile.ensureLocalCopy(at: itemURL)
+                try CoordinatedFile.ensureLocalCopyBlocking(at: itemURL)
             }
         }
     }

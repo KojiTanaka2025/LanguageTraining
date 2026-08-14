@@ -38,6 +38,8 @@ Use the same Apple ID on Mac and iPhone, with iCloud Drive turned on. Sharing us
 
 If iCloud Drive is off, or the iPhone has not chosen the folder yet, each device keeps its own local library.
 
+The first time a device opens a shared library, Library may show “Loading library…” while iCloud Drive downloads `cards.xml` and audio. The app stays usable while that finishes.
+
 The API key is stored in Keychain on each device. Enter it once on Mac and once on iPhone.
 
 ### iCloud Drive Does Not Appear In Locations
@@ -175,7 +177,7 @@ If the library cannot be loaded, the app shows an error and disables saving so y
 ~/Library/Application Support/LanguageTraining_Backups/
 ```
 
-Avoid editing the library on Mac and iPhone at the same time. The last written `cards.xml` wins.
+Avoid editing the library on Mac and iPhone at the same time. The last saved `cards.xml` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.
 
 ## Troubleshooting
 
@@ -201,11 +203,9 @@ On Mac, check `iCloud Drive/LanguageTraining/` and:
 
 On iPhone, confirm Settings shows Library as iCloud Drive, and that you selected the `LanguageTraining` folder.
 
+If Library shows “Loading library…”, wait for iCloud Drive to finish downloading. On a slow network this can take a little while on first launch.
+
 If the app says the library could not be loaded, do not save a new card until the error is resolved.
-
-### iPhone Library Tap Does Nothing
-
-Use a build that opens a card on the next screen when you tap a row. Rebuild and reinstall `LanguageTraining iOS` from Xcode if an older build is still on the phone.
 
 ### iCloud Drive Missing In The Files Picker
 

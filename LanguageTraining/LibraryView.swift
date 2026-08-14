@@ -18,7 +18,14 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.cards.isEmpty, let loadError = store.loadErrorMessage {
+                if store.isLoading && store.cards.isEmpty {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                        Text("Loading library…")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if store.cards.isEmpty, let loadError = store.loadErrorMessage {
                     emptyState(
                         icon: "exclamationmark.triangle",
                         title: "Library could not be loaded",
@@ -255,7 +262,7 @@ struct LibraryView: View {
             
             do {
                 if let audioURL = current.audioFileURL() {
-                    try? CoordinatedFile.ensureLocalCopy(at: audioURL)
+                    try? await CoordinatedFile.ensureLocalCopy(at: audioURL)
                     if FileManager.default.fileExists(atPath: audioURL.path) {
                         try audioPlayer.play(fileURL: audioURL, text: current.sourceText, deleteAfterPlay: false)
                         isLoadingAudio = false
@@ -292,7 +299,7 @@ struct LibraryView: View {
                 try? FileManager.default.removeItem(at: audioURL)
 
                 if let savedURL = updated.audioFileURL() {
-                    try? CoordinatedFile.ensureLocalCopy(at: savedURL)
+                    try? await CoordinatedFile.ensureLocalCopy(at: savedURL)
                     try audioPlayer.play(fileURL: savedURL, text: updated.sourceText, deleteAfterPlay: false)
                 }
                 
