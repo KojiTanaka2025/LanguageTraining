@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 import Combine
 
 struct ExplainView: View {
@@ -38,12 +37,23 @@ struct ExplainView: View {
     }
 
     var body: some View {
-        VSplitView {
-            sourcePane
-                .frame(minHeight: 160)
+        Group {
+            #if os(macOS)
+            VSplitView {
+                sourcePane
+                    .frame(minHeight: 160)
 
-            explanationPane
-                .frame(minHeight: 280)
+                explanationPane
+                    .frame(minHeight: 280)
+            }
+            #else
+            VStack(spacing: 0) {
+                sourcePane
+                    .frame(minHeight: 180, maxHeight: 260)
+                Divider()
+                explanationPane
+            }
+            #endif
         }
         .onAppear {
             if !hasLoadedOnce {
@@ -87,10 +97,10 @@ struct ExplainView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.appTextBackground, in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 1)
+                    .stroke(Color.appSeparator.opacity(0.5), lineWidth: 1)
             )
 
             HStack(spacing: 8) {
@@ -158,7 +168,9 @@ struct ExplainView: View {
                 Toggle(isOn: $saveAudioWithCard) {
                     Text("Save audio")
                 }
+                #if os(macOS)
                 .toggleStyle(.checkbox)
+                #endif
                 .help("Save pronunciation audio with this card")
 
                 Button("Save to Library") {
@@ -189,7 +201,7 @@ struct ExplainView: View {
                     Text("No explanation yet")
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                    Text("Paste text, then press Explain or Command-Return.")
+                    Text("Paste text, then press Explain.")
                         .font(.callout)
                         .foregroundStyle(.tertiary)
                 }
@@ -198,7 +210,7 @@ struct ExplainView: View {
             } else {
                 FormattedMarkdownView(markdown: markdown)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.appTextBackground)
             }
         }
     }
@@ -231,8 +243,7 @@ struct ExplainView: View {
     private func loadClipboardOnly() {
         cleanupTempAudio()
         
-        let pb = NSPasteboard.general
-        if let text = pb.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if let text = Clipboard.string()?.trimmingCharacters(in: .whitespacesAndNewlines),
            !text.isEmpty {
             clipboardText = text
         }

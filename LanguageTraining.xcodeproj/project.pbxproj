@@ -15,6 +15,7 @@
 		EBC13B002F6C0A2C00D327AC /* LanguageTraining.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LanguageTraining.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EBC32D7C2F972BE6004E7B04 /* AppIconGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconGenerator.swift; sourceTree = "<group>"; };
 		EBC32D7E2F973414004E7B04 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
+		EBC32E002F981000004E7B04 /* LanguageTraining.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LanguageTraining.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -28,6 +29,23 @@
 			);
 			target = EBC13AFF2F6C0A2C00D327AC /* LanguageTraining */;
 		};
+		EBC32E092F981000004E7B04 /* Exceptions for "LanguageTraining" folder in "LanguageTraining iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				NETWORK_TROUBLESHOOTING.md,
+				QUICKSTART.md,
+				README.md,
+			);
+			target = EBC32E012F981000004E7B04 /* LanguageTraining iOS */;
+		};
+		EBC32E0A2F981000004E7B04 /* Exceptions for "LanguageTrainingiOS" folder in "LanguageTraining iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EBC32E012F981000004E7B04 /* LanguageTraining iOS */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -35,14 +53,30 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				EBC32D802F980001004E7B04 /* Exceptions for "LanguageTraining" folder in "LanguageTraining" target */,
+				EBC32E092F981000004E7B04 /* Exceptions for "LanguageTraining" folder in "LanguageTraining iOS" target */,
 			);
 			path = LanguageTraining;
+			sourceTree = "<group>";
+		};
+		EBC32E082F981000004E7B04 /* LanguageTrainingiOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EBC32E0A2F981000004E7B04 /* Exceptions for "LanguageTrainingiOS" folder in "LanguageTraining iOS" target */,
+			);
+			path = LanguageTrainingiOS;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		EBC13AFD2F6C0A2C00D327AC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EBC32E032F981000004E7B04 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -56,6 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				EBC13B022F6C0A2C00D327AC /* LanguageTraining */,
+				EBC32E082F981000004E7B04 /* LanguageTrainingiOS */,
 				EBC13B012F6C0A2C00D327AC /* Products */,
 				EB9FB3872F972660000CDBC1 /* .gitignore */,
 				EBC32D7C2F972BE6004E7B04 /* AppIconGenerator.swift */,
@@ -67,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				EBC13B002F6C0A2C00D327AC /* LanguageTraining.app */,
+				EBC32E002F981000004E7B04 /* LanguageTraining.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -96,6 +132,29 @@
 			productReference = EBC13B002F6C0A2C00D327AC /* LanguageTraining.app */;
 			productType = "com.apple.product-type.application";
 		};
+		EBC32E012F981000004E7B04 /* LanguageTraining iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EBC32E072F981000004E7B04 /* Build configuration list for PBXNativeTarget "LanguageTraining iOS" */;
+			buildPhases = (
+				EBC32E022F981000004E7B04 /* Sources */,
+				EBC32E032F981000004E7B04 /* Frameworks */,
+				EBC32E042F981000004E7B04 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EBC13B022F6C0A2C00D327AC /* LanguageTraining */,
+				EBC32E082F981000004E7B04 /* LanguageTrainingiOS */,
+			);
+			name = "LanguageTraining iOS";
+			packageProductDependencies = (
+			);
+			productName = LanguageTraining;
+			productReference = EBC32E002F981000004E7B04 /* LanguageTraining.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -107,6 +166,9 @@
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					EBC13AFF2F6C0A2C00D327AC = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					EBC32E012F981000004E7B04 = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
@@ -126,12 +188,20 @@
 			projectRoot = "";
 			targets = (
 				EBC13AFF2F6C0A2C00D327AC /* LanguageTraining */,
+				EBC32E012F981000004E7B04 /* LanguageTraining iOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		EBC13AFE2F6C0A2C00D327AC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EBC32E042F981000004E7B04 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -146,6 +216,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				EBC32D7F2F973414004E7B04 /* DataManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EBC32E022F981000004E7B04 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -277,15 +354,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LanguageTraining/LanguageTraining.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CODE_SIGN_ENTITLEMENTS = LanguageTraining/LanguageTraining.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2B8WL876T9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_EXPAND_BUILD_SETTINGS = YES;
 				INFOPLIST_FILE = LanguageTraining/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
@@ -302,6 +380,7 @@
 				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -315,15 +394,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LanguageTraining/LanguageTraining.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CODE_SIGN_ENTITLEMENTS = LanguageTraining/LanguageTraining.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2B8WL876T9;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_EXPAND_BUILD_SETTINGS = YES;
 				INFOPLIST_FILE = LanguageTraining/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
@@ -340,11 +420,95 @@
 				REGISTER_APP_GROUPS = YES;
 				SKIP_INSTALL = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		EBC32E052F981000004E7B04 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LanguageTrainingiOS/LanguageTrainingiOS.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2B8WL876T9;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_EXPAND_BUILD_SETTINGS = YES;
+				INFOPLIST_FILE = LanguageTrainingiOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026. All rights reserved.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.LanguageTraining.iOS;
+				PRODUCT_NAME = LanguageTraining;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		EBC32E062F981000004E7B04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LanguageTrainingiOS/LanguageTrainingiOS.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 2B8WL876T9;
+				ENABLE_PREVIEWS = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_EXPAND_BUILD_SETTINGS = YES;
+				INFOPLIST_FILE = LanguageTrainingiOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LanguageTraining;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026. All rights reserved.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kojitanaka.LanguageTraining.iOS;
+				PRODUCT_NAME = LanguageTraining;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -365,6 +529,15 @@
 			buildConfigurations = (
 				EBC13B0C2F6C0A2D00D327AC /* Debug */,
 				EBC13B0D2F6C0A2D00D327AC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EBC32E072F981000004E7B04 /* Build configuration list for PBXNativeTarget "LanguageTraining iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EBC32E052F981000004E7B04 /* Debug */,
+				EBC32E062F981000004E7B04 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

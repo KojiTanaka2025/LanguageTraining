@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 
+#if os(macOS)
 @main
 struct LanguageTrainingApp: App {
     @StateObject private var store = CardStore()
@@ -33,3 +34,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 }
+#else
+@main
+struct LanguageTrainingApp: App {
+    @StateObject private var store = CardStore()
+    @StateObject private var settings = AppSettings()
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environmentObject(store)
+                .environmentObject(settings)
+        }
+    }
+}
+#endif
