@@ -36,6 +36,12 @@ final class AudioPlayerService: NSObject, ObservableObject {
         player = try AVAudioPlayer(contentsOf: fileURL)
         player?.delegate = self
         player?.prepareToPlay()
+
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback, mode: .spokenAudio, options: [])
+        try session.setActive(true)
+        #endif
         
         // 再生開始
         guard player?.play() == true else {

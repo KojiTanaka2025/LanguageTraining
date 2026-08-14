@@ -22,102 +22,165 @@ enum CardXMLCodec {
     static let version = "1"
 
     static func encode(cards: [Card]) throws -> Data {
-        let doc = XMLDocument(rootElement: XMLElement(name: "EnglishCardData"))
-        doc.characterEncoding = "utf-8"
-        doc.version = "1.0"
+        var xml = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <EnglishCardData version="\(version)">
+          <cards>
 
-        let root = doc.rootElement()!
-        if let versionAttr = XMLNode.attribute(withName: "version", stringValue: version) as? XMLNode {
-            root.addAttribute(versionAttr)
-        }
-
-        let cardsElement = XMLElement(name: "cards")
-        root.addChild(cardsElement)
+        """
 
         for card in cards {
-            let cardElement = XMLElement(name: "card")
-            if let idAttr = XMLNode.attribute(withName: "id", stringValue: card.id.uuidString) as? XMLNode {
-                cardElement.addAttribute(idAttr)
+            xml += "    <card id=\"\(escapeAttribute(card.id.uuidString))\" createdAt=\"\(iso8601Fractional.string(from: card.createdAt))\""
+            if let audioFileName = Card.sanitizedAudioFileName(card.audioFileName) {
+                xml += " audioFileName=\"\(escapeAttribute(audioFileName))\""
             }
-            if let createdAtAttr = XMLNode.attribute(withName: "createdAt", stringValue: iso8601Fractional.string(from: card.createdAt)) as? XMLNode {
-                cardElement.addAttribute(createdAtAttr)
-            }
-            
-            if let audioFileName = Card.sanitizedAudioFileName(card.audioFileName),
-               let audioAttr = XMLNode.attribute(withName: "audioFileName", stringValue: audioFileName) as? XMLNode {
-                cardElement.addAttribute(audioAttr)
-            }
-
-            let source = XMLElement(name: "sourceText", stringValue: card.sourceText)
-            let markdown = XMLElement(name: "markdown")
-            markdown.setStringValue(card.markdown, resolvingEntities: false)
-
-            cardElement.addChild(source)
-            cardElement.addChild(markdown)
-            cardsElement.addChild(cardElement)
+            xml += ">\n"
+            xml += "      <sourceText>\(escapeText(card.sourceText))</sourceText>\n"
+            xml += "      <markdown>\(escapeText(card.markdown))</markdown>\n"
+            xml += "    </card>\n"
         }
 
-        return doc.xmlData(options: [.nodePrettyPrint])
+        xml += """
+          </cards>
+        </EnglishCardData>
+        """
+
+        guard let data = xml.data(using: .utf8) else {
+            throw CardXMLError.unreadableCards
+        }
+        return data
     }
 
     static func decode(data: Data) throws -> [Card] {
-        let doc = try XMLDocument(data: data, options: [.nodePreserveAll])
-        guard let root = doc.rootElement(), root.name == "EnglishCardData" else {
+        let parser = XMLParser(data: data)
+        let delegate = LibraryXMLParserDelegate()
+        parser.delegate = delegate
+        parser.shouldProcessNamespaces = false
+        guard parser.parse() else {
+            if let error = delegate.parseError {
+                throw error
+            }
             throw CardXMLError.invalidRoot
         }
-
-        guard let cardsElement = root.elements(forName: "cards").first else {
+        if let error = delegate.parseError {
+            throw error
+        }
+        guard delegate.sawRoot else {
+            throw CardXMLError.invalidRoot
+        }
+        guard delegate.sawCards else {
             throw CardXMLError.missingCardsElement
         }
-
-        let nodes = cardsElement.elements(forName: "card")
-        var cards: [Card] = []
-
-        for node in nodes {
-            guard
-                let idString = node.attribute(forName: "id")?.stringValue,
-                let id = UUID(uuidString: idString),
-                let createdAtString = node.attribute(forName: "createdAt")?.stringValue,
-                let createdAt = parseDate(createdAtString)
-            else { continue }
-
-            let sourceText = node.elements(forName: "sourceText").first?.stringValue ?? ""
-            let markdown = node.elements(forName: "markdown").first?.stringValue ?? ""
-            let audioFileName = Card.sanitizedAudioFileName(node.attribute(forName: "audioFileName")?.stringValue)
-
-            cards.append(Card(
-                id: id,
-                createdAt: createdAt,
-                sourceText: sourceText,
-                markdown: markdown,
-                audioFileName: audioFileName
-            ))
-        }
-
-        if cards.isEmpty && !nodes.isEmpty {
+        if delegate.cards.isEmpty && delegate.cardNodeCount > 0 {
             throw CardXMLError.unreadableCards
         }
 
-        cards.sort { $0.createdAt > $1.createdAt }
-        return cards
+        return delegate.cards.sorted { $0.createdAt > $1.createdAt }
     }
 
-    private static func parseDate(_ string: String) -> Date? {
+    fileprivate static func parseDate(_ string: String) -> Date? {
         if let date = iso8601Fractional.date(from: string) {
             return date
         }
         return iso8601.date(from: string)
     }
 
+    private static func escapeText(_ string: String) -> String {
+        string
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+    }
+
+    private static func escapeAttribute(_ string: String) -> String {
+        escapeText(string)
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&apos;")
+    }
+
     private static let iso8601Fractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
     }()
 
     private static let iso8601: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
     }()
+}
+
+private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
+    var cards: [Card] = []
+    var sawRoot = false
+    var sawCards = false
+    var cardNodeCount = 0
+    var parseError: Error?
+
+    private var currentID: UUID?
+    private var currentCreatedAt: Date?
+    private var currentAudioFileName: String?
+    private var currentSourceText = ""
+    private var currentMarkdown = ""
+    private var currentElement: String?
+    private var textBuffer = ""
+
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String: String] = [:]) {
+        if elementName == "EnglishCardData" {
+            sawRoot = true
+            return
+        }
+        if elementName == "cards" {
+            sawCards = true
+            return
+        }
+        if elementName == "card" {
+            cardNodeCount += 1
+            currentID = UUID(uuidString: attributeDict["id"] ?? "")
+            currentCreatedAt = CardXMLCodec.parseDate(attributeDict["createdAt"] ?? "")
+            currentAudioFileName = attributeDict["audioFileName"]
+            currentSourceText = ""
+            currentMarkdown = ""
+        }
+        currentElement = elementName
+        textBuffer = ""
+    }
+
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        textBuffer += string
+    }
+
+    func parser(_ parser: XMLParser, foundCDATA CDATABlock: Data) {
+        if let string = String(data: CDATABlock, encoding: .utf8) {
+            textBuffer += string
+        }
+    }
+
+    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
+        if elementName == "sourceText" {
+            currentSourceText = textBuffer
+        } else if elementName == "markdown" {
+            currentMarkdown = textBuffer
+        } else if elementName == "card" {
+            if let id = currentID, let createdAt = currentCreatedAt {
+                cards.append(Card(
+                    id: id,
+                    createdAt: createdAt,
+                    sourceText: currentSourceText,
+                    markdown: currentMarkdown,
+                    audioFileName: Card.sanitizedAudioFileName(currentAudioFileName)
+                ))
+            }
+            currentID = nil
+            currentCreatedAt = nil
+            currentAudioFileName = nil
+        }
+        currentElement = nil
+        textBuffer = ""
+    }
+
+    func parser(_ parser: XMLParser, parseErrorOccurred parseError: Error) {
+        self.parseError = parseError
+    }
 }

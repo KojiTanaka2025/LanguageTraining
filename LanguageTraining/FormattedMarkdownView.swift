@@ -1,8 +1,32 @@
 import SwiftUI
-import AppKit
 
-/// NSTextViewを使用してMarkdownをフォーマット済みで表示するビュー
-struct FormattedMarkdownView: NSViewRepresentable {
+#if os(macOS)
+import AppKit
+private typealias PlatformColor = NSColor
+private typealias PlatformFont = NSFont
+
+private extension NSColor {
+    static var label: NSColor { .labelColor }
+    static var secondaryLabel: NSColor { .secondaryLabelColor }
+    static var tertiaryLabel: NSColor { .tertiaryLabelColor }
+    static var quaternaryLabel: NSColor { .quaternaryLabelColor }
+}
+#else
+import UIKit
+private typealias PlatformColor = UIColor
+private typealias PlatformFont = UIFont
+#endif
+
+struct FormattedMarkdownView: View {
+    let markdown: String
+
+    var body: some View {
+        MarkdownTextView(markdown: markdown)
+    }
+}
+
+#if os(macOS)
+private struct MarkdownTextView: NSViewRepresentable {
     let markdown: String
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -25,7 +49,6 @@ struct FormattedMarkdownView: NSViewRepresentable {
         textView.allowsUndo = false
         textView.isRichText = true
         textView.usesAdaptiveColorMappingForDarkAppearance = true
-
         return scrollView
     }
 
@@ -39,10 +62,7 @@ struct FormattedMarkdownView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        guard let textView = scrollView.documentView as? NSTextView else {
-            return
-        }
-
+        guard let textView = scrollView.documentView as? NSTextView else { return }
         let appearance = scrollView.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])
         let markdownChanged = context.coordinator.lastMarkdown != markdown
         let appearanceChanged = context.coordinator.lastAppearance != appearance
@@ -51,7 +71,6 @@ struct FormattedMarkdownView: NSViewRepresentable {
         let savedOffset = scrollView.contentView.bounds.origin
         context.coordinator.lastMarkdown = markdown
         context.coordinator.lastAppearance = appearance
-
         textView.textStorage?.setAttributedString(MarkdownFormatter.format(markdown))
 
         if !markdownChanged {
@@ -60,6 +79,58 @@ struct FormattedMarkdownView: NSViewRepresentable {
         }
     }
 }
+#else
+private final class SizingTextView: UITextView {
+    override var intrinsicContentSize: CGSize {
+        let width = bounds.width > 0 ? bounds.width : UIScreen.main.bounds.width
+        let fitting = sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: UIView.noIntrinsicMetric, height: fitting.height)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        invalidateIntrinsicContentSize()
+    }
+}
+
+private struct MarkdownTextView: UIViewRepresentable {
+    let markdown: String
+
+    func makeUIView(context: Context) -> SizingTextView {
+        let textView = SizingTextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isScrollEnabled = false
+        textView.backgroundColor = .clear
+        textView.textContainerInset = UIEdgeInsets(top: 12, left: 20, bottom: 24, right: 20)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.adjustsFontForContentSizeCategory = true
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return textView
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    final class Coordinator {
+        var lastMarkdown: String?
+        var lastStyle: UIUserInterfaceStyle?
+    }
+
+    func updateUIView(_ textView: SizingTextView, context: Context) {
+        let style = textView.traitCollection.userInterfaceStyle
+        let markdownChanged = context.coordinator.lastMarkdown != markdown
+        let appearanceChanged = context.coordinator.lastStyle != style
+        guard markdownChanged || appearanceChanged else { return }
+
+        context.coordinator.lastMarkdown = markdown
+        context.coordinator.lastStyle = style
+        textView.attributedText = MarkdownFormatter.format(markdown)
+        textView.invalidateIntrinsicContentSize()
+    }
+}
+#endif
 
 private enum MarkdownFormatter {
     private static let bodySize: CGFloat = 15
@@ -94,10 +165,10 @@ private enum MarkdownFormatter {
             return heading(String(trimmed.dropFirst(4)), size: subsectionSize, weight: .semibold, spaceBefore: 14, spaceAfter: 6)
         }
         if trimmed.hasPrefix("#### ") {
-            return heading(String(trimmed.dropFirst(5)), size: subsectionSize, weight: .medium, spaceBefore: 12, spaceAfter: 4, color: .secondaryLabelColor)
+            return heading(String(trimmed.dropFirst(5)), size: subsectionSize, weight: .medium, spaceBefore: 12, spaceAfter: 4, color: .secondaryLabel)
         }
         if trimmed == "---" || trimmed == "***" {
-            return heading(" ", size: 6, weight: .regular, spaceBefore: 8, spaceAfter: 8, color: .tertiaryLabelColor)
+            return heading(" ", size: 6, weight: .regular, spaceBefore: 8, spaceAfter: 8, color: .tertiaryLabel)
         }
         if trimmed.hasPrefix("- ") || trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil {
             return formatListItem(line)
@@ -112,10 +183,10 @@ private enum MarkdownFormatter {
     private static func heading(
         _ title: String,
         size: CGFloat,
-        weight: NSFont.Weight,
+        weight: PlatformFont.Weight,
         spaceBefore: CGFloat,
         spaceAfter: CGFloat,
-        color: NSColor = .labelColor
+        color: PlatformColor = .label
     ) -> NSAttributedString {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 2
@@ -124,7 +195,7 @@ private enum MarkdownFormatter {
         return formatInlineStyles(
             title,
             paragraphStyle: paragraphStyle,
-            font: NSFont.systemFont(ofSize: size, weight: weight),
+            font: PlatformFont.systemFont(ofSize: size, weight: weight),
             color: color
         )
     }
@@ -158,8 +229,8 @@ private enum MarkdownFormatter {
         attributed.append(NSAttributedString(
             string: marker + "  ",
             attributes: [
-                .font: NSFont.systemFont(ofSize: bodySize, weight: .regular),
-                .foregroundColor: NSColor.tertiaryLabelColor,
+                .font: PlatformFont.systemFont(ofSize: bodySize, weight: .regular),
+                .foregroundColor: PlatformColor.tertiaryLabel,
                 .paragraphStyle: paragraphStyle
             ]
         ))
@@ -167,7 +238,6 @@ private enum MarkdownFormatter {
         return attributed
     }
 
-    /// `- ラベル: 本文` を、ラベルだけ少し強調して読みやすくする
     private static func formatLabeledContent(_ content: String, paragraphStyle: NSParagraphStyle) -> NSAttributedString {
         if let colon = content.firstIndex(of: ":") {
             let label = String(content[..<colon]).trimmingCharacters(in: .whitespaces)
@@ -177,7 +247,7 @@ private enum MarkdownFormatter {
                 result.append(formatInlineStyles(
                     label,
                     paragraphStyle: paragraphStyle,
-                    font: NSFont.systemFont(ofSize: bodySize, weight: .medium)
+                    font: PlatformFont.systemFont(ofSize: bodySize, weight: .medium)
                 ))
                 result.append(formatInlineStyles(remainder, paragraphStyle: paragraphStyle))
                 return result
@@ -196,8 +266,8 @@ private enum MarkdownFormatter {
     private static func formatInlineStyles(
         _ text: String,
         paragraphStyle: NSParagraphStyle? = nil,
-        font: NSFont = NSFont.systemFont(ofSize: bodySize),
-        color: NSColor = .labelColor
+        font: PlatformFont = PlatformFont.systemFont(ofSize: bodySize),
+        color: PlatformColor = .label
     ) -> NSAttributedString {
         var attributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -212,8 +282,8 @@ private enum MarkdownFormatter {
         formatPattern(in: attributed, pattern: #"\*\*([^*]+)\*\*"#, attributes: merged(
             base: attributes,
             [
-                .font: NSFont.systemFont(ofSize: font.pointSize, weight: .semibold),
-                .foregroundColor: NSColor.labelColor
+                .font: PlatformFont.systemFont(ofSize: font.pointSize, weight: .semibold),
+                .foregroundColor: PlatformColor.label
             ]
         ))
 
@@ -221,16 +291,16 @@ private enum MarkdownFormatter {
             base: attributes,
             [
                 .font: italicFont(size: font.pointSize),
-                .foregroundColor: NSColor.labelColor
+                .foregroundColor: PlatformColor.label
             ]
         ))
 
         formatPattern(in: attributed, pattern: #"`([^`]+)`"#, attributes: merged(
             base: attributes,
             [
-                .font: NSFont.monospacedSystemFont(ofSize: max(font.pointSize - 1, 12), weight: .regular),
-                .foregroundColor: NSColor.labelColor,
-                .backgroundColor: NSColor.quaternaryLabelColor.withAlphaComponent(0.18)
+                .font: PlatformFont.monospacedSystemFont(ofSize: max(font.pointSize - 1, 12), weight: .regular),
+                .foregroundColor: PlatformColor.label,
+                .backgroundColor: PlatformColor.quaternaryLabel.withAlphaComponent(0.18)
             ]
         ))
 
@@ -246,10 +316,15 @@ private enum MarkdownFormatter {
         return result
     }
 
-    private static func italicFont(size: CGFloat) -> NSFont {
-        let base = NSFont.systemFont(ofSize: size)
+    private static func italicFont(size: CGFloat) -> PlatformFont {
+        let base = PlatformFont.systemFont(ofSize: size)
+        #if os(macOS)
         let descriptor = base.fontDescriptor.withSymbolicTraits(.italic)
-        return NSFont(descriptor: descriptor, size: size) ?? base
+        return PlatformFont(descriptor: descriptor, size: size) ?? base
+        #else
+        guard let descriptor = base.fontDescriptor.withSymbolicTraits(.traitItalic) else { return base }
+        return PlatformFont(descriptor: descriptor, size: size)
+        #endif
     }
 
     private static func formatPattern(

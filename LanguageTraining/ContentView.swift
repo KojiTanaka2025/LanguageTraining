@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 private enum AppTab: Hashable {
     case explain
     case library
+    case settings
 }
 
 struct ContentView: View {
@@ -21,6 +22,15 @@ struct ContentView: View {
             Tab("Library", systemImage: "books.vertical", value: .library) {
                 LibraryView()
             }
+
+            #if os(iOS)
+            Tab("Settings", systemImage: "gearshape", value: .settings) {
+                NavigationStack {
+                    SettingsView()
+                        .navigationTitle("Settings")
+                }
+            }
+            #endif
         }
         .onAppear {
             store.loadIfNeeded()

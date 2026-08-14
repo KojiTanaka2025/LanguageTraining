@@ -1,6 +1,5 @@
 import SwiftUI
 import Combine
-import AppKit
 
 struct LibraryView: View {
     @EnvironmentObject private var store: CardStore
@@ -39,26 +38,7 @@ struct LibraryView: View {
                         message: "Create a card from the Explain tab."
                     )
                 } else {
-                    HSplitView {
-                        cardList
-                            .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
-
-                        if let selectedCard = filtered.first(where: { $0.id == selected }) {
-                            CardDetailPane(
-                                card: selectedCard,
-                                isLoadingAudio: $isLoadingAudio,
-                                audioErrorMessage: $audioErrorMessage,
-                                onPlayAudio: { playPronunciation(for: selectedCard) }
-                            )
-                        } else {
-                            emptyState(
-                                icon: "sidebar.left",
-                                title: "Select a card",
-                                message: "Choose a card from the list to review it."
-                            )
-                            .background(Color(nsColor: .textBackgroundColor))
-                        }
-                    }
+                    librarySplit
                 }
             }
             .navigationTitle("Library")
@@ -70,16 +50,22 @@ struct LibraryView: View {
                 }
             }
             .onAppear {
+                #if os(macOS)
                 selectFirstAvailableCard()
+                #endif
             }
             .onChange(of: filtered.map(\.id)) { _, _ in
+                #if os(macOS)
                 selectFirstAvailableCard()
+                #endif
             }
+            #if os(macOS)
             .onDeleteCommand {
                 if let card = filtered.first(where: { $0.id == selected }) {
                     cardPendingDeletion = card
                 }
             }
+            #endif
         }
         .safeAreaInset(edge: .bottom) {
             if let errorMessage {
@@ -116,6 +102,66 @@ struct LibraryView: View {
         }
     }
 
+    private var librarySplit: some View {
+        #if os(macOS)
+        HSplitView {
+            cardList
+                .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
+            cardDetail
+        }
+        #else
+        List {
+            ForEach(filtered) { card in
+                NavigationLink {
+                    CardDetailPane(
+                        card: card,
+                        isLoadingAudio: $isLoadingAudio,
+                        audioErrorMessage: $audioErrorMessage,
+                        onPlayAudio: { playPronunciation(for: card) }
+                    )
+                    .navigationTitle("Card")
+                    .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    CardRow(card: card)
+                }
+                .contextMenu {
+                    Button("Copy Text") {
+                        copySourceText(card.sourceText)
+                    }
+                    Button("Delete", role: .destructive) {
+                        cardPendingDeletion = card
+                    }
+                }
+            }
+            .onDelete { offsets in
+                if let index = offsets.first {
+                    cardPendingDeletion = filtered[index]
+                }
+            }
+        }
+        .listStyle(.plain)
+        #endif
+    }
+
+    @ViewBuilder
+    private var cardDetail: some View {
+        if let selectedCard = filtered.first(where: { $0.id == selected }) {
+            CardDetailPane(
+                card: selectedCard,
+                isLoadingAudio: $isLoadingAudio,
+                audioErrorMessage: $audioErrorMessage,
+                onPlayAudio: { playPronunciation(for: selectedCard) }
+            )
+        } else {
+            emptyState(
+                icon: "sidebar.left",
+                title: "Select a card",
+                message: "Choose a card from the list to review it."
+            )
+            .background(Color.appTextBackground)
+        }
+    }
+
     private var cardCountLabel: String {
         let total = store.cards.count
         if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -137,6 +183,11 @@ struct LibraryView: View {
                             cardPendingDeletion = card
                         }
                     }
+            }
+            .onDelete { offsets in
+                if let index = offsets.first {
+                    cardPendingDeletion = filtered[index]
+                }
             }
         }
         .listStyle(.sidebar)
@@ -192,8 +243,7 @@ struct LibraryView: View {
     }
 
     private func copySourceText(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        Clipboard.setString(text)
     }
     
     private func playPronunciation(for card: Card) {
@@ -204,41 +254,46 @@ struct LibraryView: View {
             let current = store.cards.first(where: { $0.id == card.id }) ?? card
             
             do {
-                if let audioURL = current.audioFileURL(),
-                   FileManager.default.fileExists(atPath: audioURL.path) {
-                    try audioPlayer.play(fileURL: audioURL, text: current.sourceText, deleteAfterPlay: false)
-                } else {
-                    guard !settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                        audioErrorMessage = "API key is not set. Open Settings and enter your API key."
+                if let audioURL = current.audioFileURL() {
+                    try? CoordinatedFile.ensureLocalCopy(at: audioURL)
+                    if FileManager.default.fileExists(atPath: audioURL.path) {
+                        try audioPlayer.play(fileURL: audioURL, text: current.sourceText, deleteAfterPlay: false)
                         isLoadingAudio = false
                         return
                     }
+                }
 
-                    guard let baseURL = URL(string: settings.openAIBaseURL) else {
-                        throw OpenAIError.invalidBaseURL
-                    }
-                    
-                    let client = OpenAIClient(
-                        baseURL: baseURL,
-                        apiKey: settings.apiKey,
-                        model: settings.openAIModel
-                    )
-                    
-                    let audioURL = try await client.textToSpeech(
-                        text: current.sourceText,
-                        voice: OpenAIClient.defaultTTSVoice,
-                        speed: 0.9
-                    )
+                guard !settings.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    audioErrorMessage = "API key is not set. Open Settings and enter your API key."
+                    isLoadingAudio = false
+                    return
+                }
 
-                    let fileName = try store.saveAudioFile(from: audioURL, for: current.id)
-                    var updated = current
-                    updated.audioFileName = fileName
-                    try store.updateCard(updated)
-                    try? FileManager.default.removeItem(at: audioURL)
+                guard let baseURL = URL(string: settings.openAIBaseURL) else {
+                    throw OpenAIError.invalidBaseURL
+                }
 
-                    if let savedURL = updated.audioFileURL() {
-                        try audioPlayer.play(fileURL: savedURL, text: updated.sourceText, deleteAfterPlay: false)
-                    }
+                let client = OpenAIClient(
+                    baseURL: baseURL,
+                    apiKey: settings.apiKey,
+                    model: settings.openAIModel
+                )
+
+                let audioURL = try await client.textToSpeech(
+                    text: current.sourceText,
+                    voice: OpenAIClient.defaultTTSVoice,
+                    speed: 0.9
+                )
+
+                let fileName = try store.saveAudioFile(from: audioURL, for: current.id)
+                var updated = current
+                updated.audioFileName = fileName
+                try store.updateCard(updated)
+                try? FileManager.default.removeItem(at: audioURL)
+
+                if let savedURL = updated.audioFileURL() {
+                    try? CoordinatedFile.ensureLocalCopy(at: savedURL)
+                    try audioPlayer.play(fileURL: savedURL, text: updated.sourceText, deleteAfterPlay: false)
                 }
                 
             } catch let error as OpenAIError {
@@ -263,65 +318,22 @@ private struct CardDetailPane: View {
     @ObservedObject private var audioPlayer = AudioPlayerService.shared
     
     var body: some View {
+        #if os(macOS)
+        macBody
+        #else
+        iOSBody
+        #endif
+    }
+
+    #if os(macOS)
+    private var macBody: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Source")
-                        .font(.headline)
-                    Text(card.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Button(action: toggleAudio) {
-                    Label {
-                        Text(audioButtonTitle)
-                    } icon: {
-                        if isLoadingAudio {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: audioButtonSymbol)
-                        }
-                    }
-                }
-                .disabled(isLoadingAudio)
-                .help(isPlayingThisCard ? "Stop playback" : "Play pronunciation")
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-
+            header
             Divider()
-
-            ScrollView {
-                Text(card.sourceText)
-                    .font(.title3)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-            }
-            .frame(minHeight: 72, maxHeight: 140)
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-
-            if let audioErrorMessage {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(audioErrorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-            }
-
+            sourceBlock
+            audioErrorBanner
             Divider()
                 .padding(.top, 12)
-
             VStack(alignment: .leading, spacing: 8) {
                 Text("Explanation")
                     .font(.headline)
@@ -330,10 +342,88 @@ private struct CardDetailPane: View {
 
                 FormattedMarkdownView(markdown: card.markdown)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Color.appTextBackground)
             }
         }
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(Color.appTextBackground)
+    }
+    #else
+    private var iOSBody: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                Divider()
+                sourceBlock
+                audioErrorBanner
+                Divider()
+                    .padding(.top, 12)
+                Text("Explanation")
+                    .font(.headline)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                FormattedMarkdownView(markdown: card.markdown)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .background(Color.appTextBackground)
+    }
+    #endif
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Source")
+                    .font(.headline)
+                Text(card.createdAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Button(action: toggleAudio) {
+                Label {
+                    Text(audioButtonTitle)
+                } icon: {
+                    if isLoadingAudio {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: audioButtonSymbol)
+                    }
+                }
+            }
+            .disabled(isLoadingAudio)
+            .help(isPlayingThisCard ? "Stop playback" : "Play pronunciation")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+    }
+
+    private var sourceBlock: some View {
+        Text(card.sourceText)
+            .font(.title3)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+    }
+
+    @ViewBuilder
+    private var audioErrorBanner: some View {
+        if let audioErrorMessage {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text(audioErrorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+        }
     }
 
     private var isPlayingThisCard: Bool {
