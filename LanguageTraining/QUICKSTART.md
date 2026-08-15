@@ -60,7 +60,7 @@ The Files picker may show On My iPhone, Google Drive, or other locations without
 3. Enter your OpenAI API key.
 4. Keep the default model unless you need a different one.
 5. Keep the Base URL as `https://api.openai.com` unless you use a trusted OpenAI-compatible provider.
-6. Optionally set Explanation Language. Japanese is often easier to read for Japanese learners of English.
+6. Optionally set Explanation Language. Japanese is the verified setting for Japanese learners of English. Other languages are available but have not been checked in use.
 7. Click Save.
 
 ### iPhone
@@ -110,14 +110,16 @@ You can listen to the source text with Listen, and stop playback with Stop.
 
 Generated cards can include:
 
-- A simple meaning and when to use the expression
+- The original text at the top of the explanation
+- Meaning, a natural translation (not a word-for-word gloss), and when to use the expression
 - Pronunciation and stress
-- How the sentence is built
+- Sentence structure, split from the English source rather than from the translation
 - Grammar that appears in the text, such as articles, prepositions, and tense
-- Useful words and collocations
-- Short everyday examples
+- Vocabulary as English chunks, with a gloss in the explanation language
+- Short workplace or adult examples
 - Similar expressions and common mistakes
-- A short summary to remember
+- A short summary
+- An approximate API cost in the explanation-language currency
 - Pronunciation audio
 
 ### 4. Save The Card
@@ -132,7 +134,7 @@ Saved cards include the original text, explanation, creation date, and audio whe
 
 1. Open the Library tab.
 2. Use search to filter cards.
-3. Open a card to view the full explanation. On Mac, select it in the list. On iPhone, tap the card; the explanation opens on the next screen.
+3. Open a card to view the full explanation. On Mac, select it in the list. On iPhone, tap the card; the explanation opens on the next screen. The detail view shows the explanation only; the original text appears as the explanation title.
 4. Play saved audio, or generate audio if none is saved. Newly generated library audio is stored on the card.
 5. Copy the source text or delete a card from the context menu. On Mac you can also press Delete after selecting a card. On iPhone you can swipe to delete.
 
@@ -215,6 +217,10 @@ See [iCloud Drive Does Not Appear In Locations](#icloud-drive-does-not-appear-in
 
 Check `NETWORK_TROUBLESHOOTING.md` for network and App Sandbox diagnostics.
 
+### Confirm The API Key Is Not Misused
+
+See [Verify that the app does not misuse the API key](README.md#verify-that-the-app-does-not-misuse-the-api-key) in the app notes. In short: search the Swift sources for `Bearer`, confirm `cards.xml` does not contain the key, capture HTTPS while you click Explain, and compare that with the OpenAI usage dashboard.
+
 ## Study Tips
 
 - Save useful words and phrases as soon as you encounter them.
@@ -222,3 +228,9 @@ Check `NETWORK_TROUBLESHOOTING.md` for network and App Sandbox diagnostics.
 - Review older cards regularly.
 - Search by topic before tests or focused study sessions.
 - Use the audio feature for pronunciation practice.
+
+## Verified usage
+
+LanguageTraining has been exercised as a tool for **Japanese speakers learning English** (Japanese explanations of English source text).
+
+Other patterns have not been verified: other explanation languages, non-English source text, and other learner profiles. You can still choose those settings, but expect less review of the results.

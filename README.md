@@ -7,10 +7,15 @@ The project was originally named EnglishCard and was renamed to LanguageTraining
 ## Features
 
 - Create learning cards from pasted or clipboard text
-- Generate beginner-friendly explanations with meaning, pronunciation, grammar, examples, and common mistakes
+- Generate structured explanations with meaning, pronunciation, structure, grammar, vocabulary, examples, and notes
+- Write explanations for an adult English learner (about CEFR A2) who wants to work at a foreign company, not in a schoolbook tone
+- Keep English chunks and patterns in the structure and vocabulary sections; gloss them in the explanation language
+- Show the original text once, at the start of the explanation
+- Estimate the API cost at the end of the explanation, in a currency that matches the explanation language
 - Choose the explanation language
 - Generate and save pronunciation audio with OpenAI text-to-speech
-- Search and review saved cards
+- Search and review saved cards. Library detail shows the explanation only, so the original text is not repeated
+- On Mac, restore the last window position, window size, and split-pane sizes
 - Import and export learning data as ZIP archives
 - Store API keys in Keychain
 - Share the card library between Mac and iPhone through an iCloud Drive folder
@@ -88,6 +93,18 @@ Import backs up existing data here (this folder stays on the device):
 
 The first launch after choosing an iCloud Drive folder may show “Loading library…” while files download. That wait runs in the background so the rest of the app stays responsive.
 
+## Verified usage
+
+Hands-on checks so far cover **Japanese speakers learning English**, with Explanation Language set to Japanese and English source text.
+
+Other combinations have not been verified, including:
+
+- Other explanation languages (English, Korean, Chinese, Vietnamese, French, Spanish, German)
+- Source text that is not English
+- Learners other than adult Japanese speakers of English
+
+The UI and prompts still expose those options. Treat them as untested.
+
 ## Project Structure
 
 ```text
@@ -100,6 +117,8 @@ LanguageTraining/
 │   ├── LibraryView.swift
 │   ├── SettingsView.swift
 │   ├── FormattedMarkdownView.swift
+│   ├── APICost.swift
+│   ├── LayoutPersistence.swift
 │   ├── Card.swift
 │   ├── CardStore.swift
 │   ├── CardXMLCodec.swift
@@ -133,3 +152,4 @@ This project is licensed under the [MIT License](LICENSE).
 - Do not commit API keys or local user data.
 - Signing uses an Apple Development certificate, which is enough for personal use on this Mac and on an iPhone registered to the same team.
 - If Mac and iPhone edit the library at the same time, the last saved `cards.xml` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.
+- To check that the app does not send your API key anywhere except the OpenAI Base URL you configured, see [Verify that the app does not misuse the API key](LanguageTraining/README.md#verify-that-the-app-does-not-misuse-the-api-key).
