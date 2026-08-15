@@ -4,6 +4,7 @@ import SwiftUI
 import AppKit
 private typealias PlatformColor = NSColor
 private typealias PlatformFont = NSFont
+private typealias PlatformFontDescriptor = NSFontDescriptor
 
 private extension NSColor {
     static var label: NSColor { .labelColor }
@@ -15,6 +16,7 @@ private extension NSColor {
 import UIKit
 private typealias PlatformColor = UIColor
 private typealias PlatformFont = UIFont
+private typealias PlatformFontDescriptor = UIFontDescriptor
 #endif
 
 struct FormattedMarkdownView: View {
@@ -42,13 +44,14 @@ private struct MarkdownTextView: NSViewRepresentable {
         textView.isSelectable = true
         textView.drawsBackground = false
         textView.backgroundColor = .clear
-        textView.textContainerInset = NSSize(width: 24, height: 22)
+        textView.textContainerInset = NSSize(width: 36, height: 28)
         textView.textContainer?.lineFragmentPadding = 0
         textView.textContainer?.lineBreakMode = .byWordWrapping
         textView.textColor = .labelColor
+        textView.font = ReadingFont.body(size: ReadingMetrics.bodySize)
         textView.allowsUndo = false
         textView.isRichText = true
-        textView.usesAdaptiveColorMappingForDarkAppearance = true
+        textView.usesAdaptiveColorMappingForDarkAppearance = false
         return scrollView
     }
 
@@ -71,7 +74,9 @@ private struct MarkdownTextView: NSViewRepresentable {
         let savedOffset = scrollView.contentView.bounds.origin
         context.coordinator.lastMarkdown = markdown
         context.coordinator.lastAppearance = appearance
-        textView.textStorage?.setAttributedString(MarkdownFormatter.format(markdown))
+        scrollView.effectiveAppearance.performAsCurrentDrawingAppearance {
+            textView.textStorage?.setAttributedString(MarkdownFormatter.format(markdown))
+        }
 
         if !markdownChanged {
             scrollView.contentView.scroll(to: savedOffset)
@@ -102,7 +107,7 @@ private struct MarkdownTextView: UIViewRepresentable {
         textView.isSelectable = true
         textView.isScrollEnabled = false
         textView.backgroundColor = .clear
-        textView.textContainerInset = UIEdgeInsets(top: 12, left: 20, bottom: 24, right: 20)
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 22, bottom: 28, right: 22)
         textView.textContainer.lineFragmentPadding = 0
         textView.adjustsFontForContentSizeCategory = true
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -126,18 +131,88 @@ private struct MarkdownTextView: UIViewRepresentable {
 
         context.coordinator.lastMarkdown = markdown
         context.coordinator.lastStyle = style
-        textView.attributedText = MarkdownFormatter.format(markdown)
+        textView.traitCollection.performAsCurrent {
+            textView.attributedText = MarkdownFormatter.format(markdown)
+        }
         textView.invalidateIntrinsicContentSize()
     }
 }
 #endif
 
-private enum MarkdownFormatter {
-    private static let bodySize: CGFloat = 15
-    private static let titleSize: CGFloat = 24
-    private static let sectionSize: CGFloat = 17
-    private static let subsectionSize: CGFloat = 15
+// MARK: - Reading typography
 
+private enum ReadingMetrics {
+    static let bodySize: CGFloat = 16.5
+    static let titleSize: CGFloat = 28
+    static let sectionSize: CGFloat = 21
+    static let captionSize: CGFloat = 13
+}
+
+private enum ReadingPalette {
+    static var ink: PlatformColor { .label }
+    static var heading: PlatformColor { .label }
+    static var muted: PlatformColor { .secondaryLabel }
+    static var faint: PlatformColor { .tertiaryLabel }
+}
+
+private enum ReadingFont {
+    static func body(size: CGFloat, bold: Bool = false) -> PlatformFont {
+        scaled(cascadeSerif(size: size, bold: bold), textStyle: .body)
+    }
+
+    static func heading(size: CGFloat) -> PlatformFont {
+        scaled(cascadeSerif(size: size, bold: true), textStyle: .headline)
+    }
+
+    static func italic(size: CGFloat) -> PlatformFont {
+        let base = cascadeSerif(size: size, bold: false)
+        #if os(macOS)
+        let descriptor = base.fontDescriptor.withSymbolicTraits(.italic)
+        return PlatformFont(descriptor: descriptor, size: size) ?? base
+        #else
+        guard let descriptor = base.fontDescriptor.withSymbolicTraits(.traitItalic) else { return base }
+        return PlatformFont(descriptor: descriptor, size: size)
+        #endif
+    }
+
+    static func mono(size: CGFloat) -> PlatformFont {
+        scaled(PlatformFont.monospacedSystemFont(ofSize: size, weight: .regular), textStyle: .body)
+    }
+
+    /// New York for Latin, Hiragino Mincho for Japanese.
+    private static func cascadeSerif(size: CGFloat, bold: Bool) -> PlatformFont {
+        let weight: PlatformFont.Weight = bold ? .semibold : .medium
+        let system = PlatformFont.systemFont(ofSize: size, weight: weight)
+        let serifDescriptor = system.fontDescriptor.withDesign(.serif) ?? system.fontDescriptor
+        let minchoName = bold ? "HiraMinProN-W6" : "HiraMinProN-W3"
+        let minchoDescriptor = PlatformFontDescriptor(name: minchoName, size: size)
+
+        #if os(macOS)
+        let cascaded = serifDescriptor.addingAttributes([
+            .cascadeList: [minchoDescriptor]
+        ])
+        return PlatformFont(descriptor: cascaded, size: size)
+            ?? PlatformFont(name: minchoName, size: size)
+            ?? system
+        #else
+        let cascaded = serifDescriptor.addingAttributes([
+            .cascadeList: [minchoDescriptor]
+        ])
+        return PlatformFont(descriptor: cascaded, size: size)
+        #endif
+    }
+
+    private static func scaled(_ font: PlatformFont, textStyle: PlatformFont.TextStyle) -> PlatformFont {
+        #if os(macOS)
+        _ = textStyle
+        return font
+        #else
+        return UIFontMetrics(forTextStyle: textStyle).scaledFont(for: font)
+        #endif
+    }
+}
+
+private enum MarkdownFormatter {
     static func format(_ text: String) -> NSAttributedString {
         let output = NSMutableAttributedString()
         let lines = text.components(separatedBy: .newlines)
@@ -156,19 +231,54 @@ private enum MarkdownFormatter {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
 
         if trimmed.hasPrefix("# ") {
-            return heading(String(trimmed.dropFirst(2)), size: titleSize, weight: .bold, spaceBefore: 4, spaceAfter: 14)
+            return heading(
+                String(trimmed.dropFirst(2)),
+                font: ReadingFont.heading(size: ReadingMetrics.titleSize),
+                color: ReadingPalette.ink,
+                spaceBefore: 6,
+                spaceAfter: 10,
+                lineHeight: 1.22
+            )
         }
         if trimmed.hasPrefix("## ") {
-            return heading(String(trimmed.dropFirst(3)), size: sectionSize, weight: .semibold, spaceBefore: 22, spaceAfter: 8)
+            return heading(
+                String(trimmed.dropFirst(3)),
+                font: ReadingFont.heading(size: ReadingMetrics.sectionSize),
+                color: ReadingPalette.heading,
+                spaceBefore: 20,
+                spaceAfter: 6,
+                lineHeight: 1.28
+            )
         }
         if trimmed.hasPrefix("### ") {
-            return heading(String(trimmed.dropFirst(4)), size: subsectionSize, weight: .semibold, spaceBefore: 14, spaceAfter: 6)
+            return heading(
+                String(trimmed.dropFirst(4)),
+                font: ReadingFont.heading(size: ReadingMetrics.bodySize),
+                color: ReadingPalette.heading,
+                spaceBefore: 18,
+                spaceAfter: 8,
+                lineHeight: 1.28
+            )
         }
         if trimmed.hasPrefix("#### ") {
-            return heading(String(trimmed.dropFirst(5)), size: subsectionSize, weight: .medium, spaceBefore: 12, spaceAfter: 4, color: .secondaryLabel)
+            return heading(
+                String(trimmed.dropFirst(5)),
+                font: ReadingFont.body(size: ReadingMetrics.captionSize, bold: true),
+                color: ReadingPalette.muted,
+                spaceBefore: 14,
+                spaceAfter: 6,
+                lineHeight: 1.3
+            )
         }
         if trimmed == "---" || trimmed == "***" {
-            return heading(" ", size: 6, weight: .regular, spaceBefore: 8, spaceAfter: 8, color: .tertiaryLabel)
+            return heading(
+                "—",
+                font: ReadingFont.body(size: ReadingMetrics.captionSize),
+                color: ReadingPalette.faint,
+                spaceBefore: 18,
+                spaceAfter: 10,
+                lineHeight: 1.2
+            )
         }
         if trimmed.hasPrefix("- ") || trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil {
             return formatListItem(line)
@@ -177,25 +287,25 @@ private enum MarkdownFormatter {
             return NSAttributedString(string: "")
         }
 
-        return formatInlineStyles(line, paragraphStyle: bodyParagraphStyle())
+        return formatInlineStyles(line, paragraphStyle: bodyParagraphStyle(), color: ReadingPalette.ink)
     }
 
     private static func heading(
         _ title: String,
-        size: CGFloat,
-        weight: PlatformFont.Weight,
+        font: PlatformFont,
+        color: PlatformColor,
         spaceBefore: CGFloat,
         spaceAfter: CGFloat,
-        color: PlatformColor = .label
+        lineHeight: CGFloat
     ) -> NSAttributedString {
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 2
+        paragraphStyle.lineHeightMultiple = lineHeight
         paragraphStyle.paragraphSpacingBefore = spaceBefore
         paragraphStyle.paragraphSpacing = spaceAfter
         return formatInlineStyles(
             title,
             paragraphStyle: paragraphStyle,
-            font: PlatformFont.systemFont(ofSize: size, weight: weight),
+            font: font,
             color: color
         )
     }
@@ -203,35 +313,37 @@ private enum MarkdownFormatter {
     private static func formatListItem(_ line: String) -> NSAttributedString {
         let leadingSpaces = line.prefix(while: { $0 == " " }).count
         let level = min(leadingSpaces / 2, 3)
-        let baseIndent = 18 + CGFloat(level) * 16
+        let baseIndent = 14 + CGFloat(level) * 18
 
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 4
-        paragraphStyle.paragraphSpacing = 6
+        paragraphStyle.lineHeightMultiple = 1.26
+        paragraphStyle.paragraphSpacing = 5
         paragraphStyle.firstLineHeadIndent = baseIndent
-        paragraphStyle.headIndent = baseIndent + 18
+        paragraphStyle.headIndent = baseIndent + 16
+        paragraphStyle.lineBreakMode = .byWordWrapping
 
         let trimmed = line.trimmingCharacters(in: .whitespaces)
         let marker: String
         let content: String
 
         if trimmed.hasPrefix("- ") {
-            marker = level == 0 ? "•" : "◦"
+            marker = "·"
             content = String(trimmed.dropFirst(2))
         } else if let range = trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) {
             marker = String(trimmed[range]).trimmingCharacters(in: .whitespaces)
             content = String(trimmed[range.upperBound...])
         } else {
-            return formatInlineStyles(line, paragraphStyle: paragraphStyle)
+            return formatInlineStyles(line, paragraphStyle: paragraphStyle, color: ReadingPalette.ink)
         }
 
         let attributed = NSMutableAttributedString()
         attributed.append(NSAttributedString(
             string: marker + "  ",
             attributes: [
-                .font: PlatformFont.systemFont(ofSize: bodySize, weight: .regular),
-                .foregroundColor: PlatformColor.tertiaryLabel,
-                .paragraphStyle: paragraphStyle
+                .font: ReadingFont.body(size: ReadingMetrics.bodySize),
+                .foregroundColor: ReadingPalette.faint,
+                .paragraphStyle: paragraphStyle,
+                .ligature: 1
             ]
         ))
         attributed.append(formatLabeledContent(content, paragraphStyle: paragraphStyle))
@@ -247,31 +359,39 @@ private enum MarkdownFormatter {
                 result.append(formatInlineStyles(
                     label,
                     paragraphStyle: paragraphStyle,
-                    font: PlatformFont.systemFont(ofSize: bodySize, weight: .medium)
+                    font: ReadingFont.body(size: ReadingMetrics.bodySize, bold: true),
+                    color: ReadingPalette.muted
                 ))
-                result.append(formatInlineStyles(remainder, paragraphStyle: paragraphStyle))
+                result.append(formatInlineStyles(
+                    remainder,
+                    paragraphStyle: paragraphStyle,
+                    color: ReadingPalette.ink
+                ))
                 return result
             }
         }
-        return formatInlineStyles(content, paragraphStyle: paragraphStyle)
+        return formatInlineStyles(content, paragraphStyle: paragraphStyle, color: ReadingPalette.ink)
     }
 
     private static func bodyParagraphStyle() -> NSMutableParagraphStyle {
         let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineSpacing = 5
-        paragraphStyle.paragraphSpacing = 8
+        paragraphStyle.lineHeightMultiple = 1.28
+        paragraphStyle.paragraphSpacing = 6
+        paragraphStyle.lineBreakMode = .byWordWrapping
         return paragraphStyle
     }
 
     private static func formatInlineStyles(
         _ text: String,
         paragraphStyle: NSParagraphStyle? = nil,
-        font: PlatformFont = PlatformFont.systemFont(ofSize: bodySize),
-        color: PlatformColor = .label
+        font: PlatformFont = ReadingFont.body(size: ReadingMetrics.bodySize),
+        color: PlatformColor = ReadingPalette.ink
     ) -> NSAttributedString {
         var attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: color
+            .foregroundColor: color,
+            .ligature: 1,
+            .kern: 0.15
         ]
         if let paragraphStyle {
             attributes[.paragraphStyle] = paragraphStyle
@@ -282,25 +402,28 @@ private enum MarkdownFormatter {
         formatPattern(in: attributed, pattern: #"\*\*([^*]+)\*\*"#, attributes: merged(
             base: attributes,
             [
-                .font: PlatformFont.systemFont(ofSize: font.pointSize, weight: .semibold),
-                .foregroundColor: PlatformColor.label
+                .font: ReadingFont.body(size: font.pointSize, bold: true),
+                .foregroundColor: ReadingPalette.ink,
+                .kern: 0.2
             ]
         ))
 
         formatPattern(in: attributed, pattern: #"(?<!\*)\*([^*]+)\*(?!\*)"#, attributes: merged(
             base: attributes,
             [
-                .font: italicFont(size: font.pointSize),
-                .foregroundColor: PlatformColor.label
+                .font: ReadingFont.italic(size: max(font.pointSize - 1, ReadingMetrics.captionSize)),
+                .foregroundColor: ReadingPalette.muted,
+                .kern: 0.1
             ]
         ))
 
         formatPattern(in: attributed, pattern: #"`([^`]+)`"#, attributes: merged(
             base: attributes,
             [
-                .font: PlatformFont.monospacedSystemFont(ofSize: max(font.pointSize - 1, 12), weight: .regular),
-                .foregroundColor: PlatformColor.label,
-                .backgroundColor: PlatformColor.quaternaryLabel.withAlphaComponent(0.18)
+                .font: ReadingFont.mono(size: max(font.pointSize - 1.5, 12)),
+                .foregroundColor: ReadingPalette.ink,
+                .backgroundColor: PlatformColor.quaternaryLabel.withAlphaComponent(0.12),
+                .kern: 0
             ]
         ))
 
@@ -314,17 +437,6 @@ private enum MarkdownFormatter {
         var result = base
         overlay.forEach { result[$0.key] = $0.value }
         return result
-    }
-
-    private static func italicFont(size: CGFloat) -> PlatformFont {
-        let base = PlatformFont.systemFont(ofSize: size)
-        #if os(macOS)
-        let descriptor = base.fontDescriptor.withSymbolicTraits(.italic)
-        return PlatformFont(descriptor: descriptor, size: size) ?? base
-        #else
-        guard let descriptor = base.fontDescriptor.withSymbolicTraits(.traitItalic) else { return base }
-        return PlatformFont(descriptor: descriptor, size: size)
-        #endif
     }
 
     private static func formatPattern(

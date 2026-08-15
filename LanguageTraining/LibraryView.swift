@@ -113,7 +113,8 @@ struct LibraryView: View {
         #if os(macOS)
         HSplitView {
             cardList
-                .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
+                .frame(minWidth: 260, idealWidth: 320)
+                .background(SplitViewPersistence(key: LayoutPersistence.librarySplitKey))
             cardDetail
         }
         #else
@@ -336,21 +337,11 @@ private struct CardDetailPane: View {
     private var macBody: some View {
         VStack(spacing: 0) {
             header
-            Divider()
-            sourceBlock
             audioErrorBanner
             Divider()
-                .padding(.top, 12)
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Explanation")
-                    .font(.headline)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-
-                FormattedMarkdownView(markdown: card.markdown)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.appTextBackground)
-            }
+            FormattedMarkdownView(markdown: card.displayMarkdown)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.appTextBackground)
         }
         .background(Color.appTextBackground)
     }
@@ -359,16 +350,9 @@ private struct CardDetailPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                Divider()
-                sourceBlock
                 audioErrorBanner
                 Divider()
-                    .padding(.top, 12)
-                Text("Explanation")
-                    .font(.headline)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                FormattedMarkdownView(markdown: card.markdown)
+                FormattedMarkdownView(markdown: card.displayMarkdown)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -379,7 +363,7 @@ private struct CardDetailPane: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Source")
+                Text("Explanation")
                     .font(.headline)
                 Text(card.createdAt.formatted(date: .abbreviated, time: .shortened))
                     .font(.caption)
@@ -405,16 +389,6 @@ private struct CardDetailPane: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-    }
-
-    private var sourceBlock: some View {
-        Text(card.sourceText)
-            .font(.title3)
-            .textSelection(.enabled)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
     }
 
     @ViewBuilder

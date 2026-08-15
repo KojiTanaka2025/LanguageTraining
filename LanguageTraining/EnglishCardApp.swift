@@ -2,6 +2,8 @@ import SwiftUI
 import Combine
 
 #if os(macOS)
+import AppKit
+
 @main
 struct LanguageTrainingApp: App {
     @StateObject private var store = CardStore()
@@ -14,9 +16,11 @@ struct LanguageTrainingApp: App {
                 .environmentObject(store)
                 .environmentObject(settings)
                 .frame(minWidth: 980, minHeight: 640)
+                .background(WindowFramePersistence())
         }
         .defaultSize(width: 1100, height: 720)
         .windowResizability(.contentMinSize)
+        .restorationBehavior(.disabled)
         .commands {
             CommandGroup(replacing: .newItem) {}
         }
@@ -29,9 +33,13 @@ struct LanguageTrainingApp: App {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        LayoutPersistence.saveNow()
     }
 }
 #else

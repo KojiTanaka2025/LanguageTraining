@@ -53,4 +53,48 @@ struct Card: Identifiable, Hashable, Sendable {
         guard trimmed.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return nil }
         return trimmed
     }
+
+    /// Explanation for the UI: drop the unhelpful "easy wording" field, then show the source once as the title.
+    var displayMarkdown: String {
+        Self.displayMarkdown(from: markdown, sourceText: sourceText)
+    }
+
+    static func displayMarkdown(from markdown: String, sourceText: String? = nil) -> String {
+        var lines = markdown.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).map(String.init)
+
+        if let index = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+            let heading = lines[index].trimmingCharacters(in: .whitespaces)
+            if heading.hasPrefix("#"), !heading.hasPrefix("##") {
+                lines.remove(at: index)
+                while index < lines.count, lines[index].trimmingCharacters(in: .whitespaces).isEmpty {
+                    lines.remove(at: index)
+                }
+            }
+        }
+
+        lines.removeAll { isEasyWordingField($0) }
+
+        let body = lines.joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let source = sourceText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !source.isEmpty else { return body }
+        if body.isEmpty { return "# \(source)" }
+        return "# \(source)\n\n" + body
+    }
+
+    private static func isEasyWordingField(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        let prefixes = [
+            "- かんたんな言い方:",
+            "- Nói dễ hiểu:",
+            "- 쉬운 말:",
+            "- 简单说法:",
+            "- 簡單說法:",
+            "- En mots simples:",
+            "- En palabras fáciles:",
+            "- In einfachen Worten:",
+            "- In easy words:",
+        ]
+        return prefixes.contains { trimmed.hasPrefix($0) }
+    }
 }

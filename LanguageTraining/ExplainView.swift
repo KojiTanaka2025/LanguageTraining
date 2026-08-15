@@ -42,6 +42,7 @@ struct ExplainView: View {
             VSplitView {
                 sourcePane
                     .frame(minHeight: 160)
+                    .background(SplitViewPersistence(key: LayoutPersistence.explainSplitKey))
 
                 explanationPane
                     .frame(minHeight: 280)
@@ -208,7 +209,7 @@ struct ExplainView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(40)
             } else {
-                FormattedMarkdownView(markdown: markdown)
+                FormattedMarkdownView(markdown: Card.displayMarkdown(from: markdown, sourceText: sourceText))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.appTextBackground)
             }
@@ -274,7 +275,7 @@ struct ExplainView: View {
         }
         
         async let audioTask: URL? = audioURL(for: text)
-        async let explanationTask: String? = fetchExplanationText(text: text)
+        async let explanationTask: ExplanationResult? = fetchExplanationText(text: text)
         
         let (audio, explanation) = await (audioTask, explanationTask)
         
@@ -285,7 +286,15 @@ struct ExplainView: View {
         }
         
         if let explanation = explanation {
-            markdown = explanation
+            let chargedForNewAudio = needsNewAudio && audio != nil
+            let chatUSD = APICost.chatUSD(model: settings.openAIModel, usage: explanation.usage)
+            let audioUSD = chargedForNewAudio ? APICost.ttsUSD(spokenText: text) : 0
+            markdown = APICost.appendingFooter(
+                to: Card.displayMarkdown(from: explanation.markdown),
+                usd: chatUSD + audioUSD,
+                explanationLanguage: settings.explanationLanguage,
+                includedAudio: chargedForNewAudio
+            )
         }
         
         isLoading = false
@@ -318,7 +327,7 @@ struct ExplainView: View {
     }
     
     /// 解説を取得（エラーは内部でハンドリング）
-    private func fetchExplanationText(text: String) async -> String? {
+    private func fetchExplanationText(text: String) async -> ExplanationResult? {
         do {
             return try await client().explainEnglish(
                 text: text,
@@ -358,7 +367,7 @@ struct ExplainView: View {
         didSave = false
         errorMessage = nil
         let source = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let md = markdown.trimmingCharacters(in: .whitespacesAndNewlines)
+        let md = Card.displayMarkdown(from: markdown)
         guard !source.isEmpty, !md.isEmpty else { return }
         
         do {
