@@ -20,6 +20,14 @@ The project was originally named EnglishCard and was renamed to LanguageTraining
 - Store API keys in Keychain
 - Share the card library between Mac and iPhone through an iCloud Drive folder
 
+## Usage example
+
+Paste English text in Explain, then generate a Japanese explanation. The original stays at the top of the explanation, followed by meaning, pronunciation, structure, and grammar.
+
+![Explain view: English source text about safety culture, with a Japanese explanation below](docs/explain-example.jpg)
+
+This screenshot is from the verified setup: a Japanese speaker learning English, with Explanation Language set to Japanese.
+
 ## Requirements
 
 - macOS 26.2 or later for the Mac app
@@ -136,6 +144,8 @@ LanguageTraining/
 ├── LanguageTrainingiOS/
 │   ├── Info.plist
 │   └── LanguageTrainingiOS.entitlements
+├── docs/
+│   └── explain-example.jpg
 ├── DataManager.swift
 ├── scripts/
 │   ├── install-app.sh
