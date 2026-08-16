@@ -113,6 +113,36 @@ Other combinations have not been verified, including:
 
 The UI and prompts still expose those options. Treat them as untested.
 
+## Architecture
+
+The README uses a deliberately small Mermaid diagram so it renders reliably in GitHub and common Markdown viewers. The detailed diagram is an SVG, which keeps the complete labels and layout stable.
+
+```mermaid
+flowchart LR
+  User([User]) --> UI[SwiftUI Views]
+  UI --> Core[Application Services]
+  Core --> Data[Card Library]
+  Core --> Apple[Apple Services]
+  Core --> API[OpenAI-Compatible API]
+  Apple --> Data
+
+  classDef user fill:#A43B1C,stroke:#6D2410,color:#FFFFFF,stroke-width:2px;
+  classDef app fill:#285A8E,stroke:#173A5E,color:#FFFFFF,stroke-width:2px;
+  classDef data fill:#9A6700,stroke:#694600,color:#FFFFFF,stroke-width:2px;
+  classDef platform fill:#4B5563,stroke:#29313C,color:#FFFFFF,stroke-width:2px;
+  classDef api fill:#16734A,stroke:#0D4B30,color:#FFFFFF,stroke-width:2px;
+
+  class User user;
+  class UI,Core app;
+  class Data data;
+  class Apple platform;
+  class API api;
+```
+
+![Detailed LanguageTraining architecture](docs/architecture.svg)
+
+The [detailed architecture diagram](docs/architecture.svg) shows the concrete components, storage choices, data flows, and a color key. API keys stay in Apple Keychain on each device; card XML and audio files are stored separately in the shared or local library.
+
 ## Project Structure
 
 ```text
@@ -145,7 +175,8 @@ LanguageTraining/
 │   ├── Info.plist
 │   └── LanguageTrainingiOS.entitlements
 ├── docs/
-│   └── explain-example.jpg
+│   ├── explain-example.jpg
+│   └── architecture.svg
 ├── DataManager.swift
 ├── scripts/
 │   ├── install-app.sh

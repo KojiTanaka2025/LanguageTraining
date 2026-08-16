@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1060" viewBox="0 0 1440 1060" role="img" aria-labelledby="title desc">
+  <title id="title">LanguageTraining architecture</title>
+  <desc id="desc">Detailed architecture diagram for the LanguageTraining SwiftUI app. Connections are deliberately grouped into simple, non-overlapping flows for navigation, application services, platform services, API access, and the card library.</desc>
+  <defs>
+    <style>
+      .bg{fill:#F8FAFC}.group{fill:#FFFFFF;stroke:#CBD5E1;stroke-width:2}.section{fill:#F8FAFF;stroke:#CBD5E1;stroke-width:2}.node{stroke-width:2}.group-title{font:700 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#0F172A}.section-title{font:700 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#0F172A}.label{font:700 15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#FFFFFF;text-anchor:middle}.small{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#FFFFFF;text-anchor:middle}.note{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#475569}.legend{font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#334155}.arrow{stroke:#64748B;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round;fill:none;marker-end:url(#arrow)}.dashed{stroke-dasharray:7 6}.edge-label{font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#64748B}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#64748B"/></marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="1060"/>
+  <text id="title-text" x="60" y="54" style="font:700 30px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;fill:#0F172A">LanguageTraining Architecture</text>
+  <text x="60" y="82" style="font:16px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;fill:#475569">Shared SwiftUI sources for macOS and iPhone · detailed component and data-flow view</text>
+
+  <!-- Structural backgrounds -->
+  <rect class="group" x="250" y="125" width="730" height="585" rx="16"/>
+  <rect class="section" x="280" y="215" width="670" height="150" rx="12"/>
+  <rect class="section" x="280" y="400" width="670" height="270" rx="12"/>
+  <rect class="group" x="1010" y="125" width="370" height="585" rx="16"/>
+  <rect class="group" x="1010" y="750" width="370" height="135" rx="16"/>
+  <rect class="group" x="60" y="800" width="920" height="135" rx="16"/>
+
+  <!--
+    Connectors are behind nodes. Every integration gets its own clear lane:
+    1. navigation is the top horizontal chain;
+    2. view-to-service calls use the gap between the two app sections;
+    3. platform links leave the app to the right;
+    4. persistence fans out once, below the app; and
+    5. the API uses one outer route. This avoids line crossings and busy forks.
+  -->
+  <g id="connectors">
+    <!-- Navigation -->
+    <path class="arrow" d="M205 306 H310"/>
+    <path class="arrow" d="M445 306 H465"/>
+    <path class="arrow" d="M600 306 H620"/>
+    <path class="arrow" d="M755 306 H775"/>
+
+    <!-- UI to services: short, separate routes -->
+    <path class="arrow" d="M532 342 V385 H375 V450"/>
+    <path class="arrow" d="M532 342 V400 H550 V450"/>
+    <path class="arrow" d="M687 342 V390 H550 V450"/>
+    <path class="arrow" d="M687 342 V450"/>
+    <path class="arrow" d="M842 342 V430 H862 V450"/>
+
+    <!-- Local service relationships -->
+    <path class="arrow" d="M550 526 V565"/>
+    <path class="arrow" d="M862 526 V545 H550 V565"/>
+
+    <!-- Apple platform links: each reaches the panel directly, without a shared maze -->
+    <path class="arrow" d="M910 306 H1040"/>
+    <path class="arrow" d="M932 603 H1040"/>
+    <path class="arrow" d="M475 603 H960 V648 H1040"/>
+    <path class="arrow dashed" d="M1040 233 H990 V185 H532 V270"/>
+
+    <!-- One API route. Chat and speech are implementation capabilities of the configured endpoint. -->
+    <path class="arrow" d="M300 488 H230 V730 H1195 V790"/>
+
+    <!-- One persistence branch, below the app -->
+    <path class="arrow" d="M550 641 V765 H180 V850"/>
+    <path class="arrow" d="M550 641 V765 H450 V850"/>
+    <path class="arrow" d="M570 882 H650"/>
+    <path class="arrow" d="M790 882 H870"/>
+  </g>
+
+  <!-- App headings -->
+  <text class="group-title" x="280" y="160">LanguageTraining App</text>
+  <text class="note" x="280" y="184">macOS and iPhone targets share these SwiftUI sources</text>
+  <text class="section-title" x="310" y="245">User Interface</text>
+  <text class="section-title" x="310" y="430">Application Services</text>
+
+  <!-- User interface -->
+  <rect class="node" x="310" y="270" width="135" height="72" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="377" y="299">ContentView</text><text class="small" x="377" y="321">Navigation shell</text>
+  <rect class="node" x="465" y="270" width="135" height="72" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="532" y="299">ExplainView</text><text class="small" x="532" y="321">Generate · save</text>
+  <rect class="node" x="620" y="270" width="135" height="72" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="687" y="299">LibraryView</text><text class="small" x="687" y="321">Search · review</text>
+  <rect class="node" x="775" y="270" width="135" height="72" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="842" y="299">SettingsView</text><text class="small" x="842" y="321">Configuration</text>
+
+  <!-- Application services -->
+  <rect class="node" x="300" y="450" width="150" height="76" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="375" y="479">OpenAIClient</text><text class="small" x="375" y="502">HTTPS requests</text>
+  <rect class="node" x="475" y="450" width="150" height="76" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="550" y="479">CardStore</text><text class="small" x="550" y="502">State · reload</text>
+  <rect class="node" x="650" y="450" width="150" height="76" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="725" y="479">AudioPlayer</text><text class="small" x="725" y="502">MP3 playback</text>
+  <rect class="node" x="825" y="450" width="75" height="76" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="862" y="479">Archive</text><text class="small" x="862" y="502">ZIP I/O</text>
+  <rect class="node" x="475" y="565" width="150" height="76" rx="10" fill="#9A6700" stroke="#694600"/>
+  <text class="label" x="550" y="594">AppStorage</text><text class="small" x="550" y="617">Library location</text>
+  <rect class="node" x="792" y="565" width="140" height="76" rx="10" fill="#285A8E" stroke="#173A5E"/>
+  <text class="label" x="862" y="594">Keychain</text><text class="small" x="862" y="617">API-key access</text>
+
+  <!-- Platform services -->
+  <text class="group-title" x="1040" y="160">Apple Platform Services</text>
+  <rect class="node" x="1040" y="195" width="140" height="76" rx="10" fill="#4B5563" stroke="#29313C"/>
+  <text class="label" x="1110" y="224">Clipboard</text><text class="small" x="1110" y="247">Source text</text>
+  <rect class="node" x="1210" y="195" width="140" height="76" rx="10" fill="#4B5563" stroke="#29313C"/>
+  <text class="label" x="1280" y="224">Files Picker</text><text class="small" x="1280" y="247">iPhone folder</text>
+  <rect class="node" x="1040" y="268" width="140" height="76" rx="10" fill="#4B5563" stroke="#29313C"/>
+  <text class="label" x="1110" y="297">UserDefaults</text><text class="small" x="1110" y="320">Preferences</text>
+  <rect class="node" x="1040" y="565" width="140" height="76" rx="10" fill="#4B5563" stroke="#29313C"/>
+  <text class="label" x="1110" y="594">Apple Keychain</text><text class="small" x="1110" y="617">Per-device key</text>
+  <rect class="node" x="1040" y="648" width="300" height="76" rx="10" fill="#4B5563" stroke="#29313C"/>
+  <text class="label" x="1190" y="673">File Coordination</text><text class="small" x="1190" y="695">NSFileCoordinator · NSFilePresenter</text><text class="small" x="1190" y="713">Coordinated access and reload</text>
+
+  <!-- External API -->
+  <text class="group-title" x="1040" y="785">Configured External API</text>
+  <rect class="node" x="1040" y="800" width="310" height="64" rx="10" fill="#16734A" stroke="#0D4B30"/>
+  <text class="label" x="1195" y="826">OpenAI-Compatible Endpoint</text><text class="small" x="1195" y="848">Chat completions · speech audio</text>
+
+  <!-- Library -->
+  <text class="group-title" x="90" y="835">Card Library</text>
+  <rect class="node" x="90" y="850" width="180" height="64" rx="10" fill="#9A6700" stroke="#694600"/>
+  <text class="label" x="180" y="872">Local Application</text><text class="small" x="180" y="892">Support · fallback</text>
+  <rect class="node" x="330" y="850" width="240" height="64" rx="10" fill="#9A6700" stroke="#694600"/>
+  <text class="label" x="450" y="872">iCloud Drive</text><text class="small" x="450" y="892">LanguageTraining · shared</text>
+  <rect class="node" x="650" y="850" width="140" height="64" rx="10" fill="#9A6700" stroke="#694600"/>
+  <text class="label" x="720" y="875">cards.xml</text><text class="small" x="720" y="895">Cards</text>
+  <rect class="node" x="870" y="850" width="90" height="64" rx="10" fill="#9A6700" stroke="#694600"/>
+  <text class="label" x="915" y="873">audio</text><text class="small" x="915" y="894">MP3 files</text>
+
+  <!-- Actor and annotations on top -->
+  <rect class="node" x="60" y="270" width="145" height="72" rx="36" fill="#A43B1C" stroke="#6D2410"/>
+  <text class="label" x="132" y="301">User</text><text class="small" x="132" y="323">Mac or iPhone</text>
+  <text class="edge-label" x="990" y="180">paste</text>
+  <text class="edge-label" x="238" y="716">HTTPS</text>
+
+  <g transform="translate(60 980)"><text class="group-title" x="0" y="0" style="font-size:16px">Color key</text><rect x="110" y="-15" width="18" height="18" rx="3" fill="#A43B1C"/><text class="legend" x="136" y="0">User</text><rect x="220" y="-15" width="18" height="18" rx="3" fill="#285A8E"/><text class="legend" x="246" y="0">App UI and services</text><rect x="410" y="-15" width="18" height="18" rx="3" fill="#9A6700"/><text class="legend" x="436" y="0">Library and persistence</text><rect x="650" y="-15" width="18" height="18" rx="3" fill="#4B5563"/><text class="legend" x="676" y="0">Apple services</text><rect x="820" y="-15" width="18" height="18" rx="3" fill="#16734A"/><text class="legend" x="846" y="0">External API</text></g>
+  <text class="note" x="60" y="1025">Security boundary: the API key is stored in Apple Keychain and is sent only by OpenAIClient to the configured HTTPS API base URL.</text>
+</svg>
