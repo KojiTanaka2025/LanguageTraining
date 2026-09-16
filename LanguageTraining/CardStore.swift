@@ -8,7 +8,7 @@ enum CardStoreError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .persistBlocked:
-            return "Saving is disabled because the library could not be loaded. Restore your data first to avoid overwriting cards.xml."
+            return "Saving is disabled because the library could not be loaded. Restore your data first to avoid overwriting cards.json."
         }
     }
 }
@@ -201,7 +201,7 @@ final class CardStore: ObservableObject {
         try ensureCanPersist()
         let url = try dataFileURL()
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let data = try CardXMLCodec.encode(
+        let data = try LibraryJSONCodec.encode(
             tags: tags,
             cards: cards,
             studyProgress: Array(studyProgress.values),
@@ -213,7 +213,7 @@ final class CardStore: ObservableObject {
 
     func dataFileURL() throws -> URL {
         let dir = try AppStorage.dataDirectoryURL()
-        return dir.appendingPathComponent("cards.xml", isDirectory: false)
+        return LibraryFile.jsonURL(in: dir)
     }
 
     private func loadLibrary() async {
@@ -353,26 +353,14 @@ private struct LibrarySnapshot: Sendable {
     var isUsingiCloud: Bool
 
     static func readFromDisk() throws -> LibrarySnapshot {
-        let url = try AppStorage.dataDirectoryURL()
-            .appendingPathComponent("cards.xml", isDirectory: false)
-        if FileManager.default.fileExists(atPath: url.path) {
-            let data = try CoordinatedFile.readData(at: url)
-            let document = try CardXMLCodec.decode(data: data)
-            return LibrarySnapshot(
-                tags: document.tags,
-                cards: document.cards,
-                studyProgress: document.studyProgress,
-                studyDailyLog: document.studyDailyLog,
-                persistedData: data,
-                isUsingiCloud: AppStorage.isUsingiCloud
-            )
-        }
+        let dir = try AppStorage.dataDirectoryURL()
+        let loaded = try LibraryJSONCodec.loadDocument(fromDirectory: dir)
         return LibrarySnapshot(
-            tags: LibraryTag.builtInDefaults,
-            cards: [],
-            studyProgress: [],
-            studyDailyLog: [],
-            persistedData: nil,
+            tags: loaded.document.tags,
+            cards: loaded.document.cards,
+            studyProgress: loaded.document.studyProgress,
+            studyDailyLog: loaded.document.studyDailyLog,
+            persistedData: loaded.persistedData,
             isUsingiCloud: AppStorage.isUsingiCloud
         )
     }

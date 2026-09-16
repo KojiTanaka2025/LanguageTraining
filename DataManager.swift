@@ -131,15 +131,18 @@ struct DataManager {
             throw DataManagerError.invalidArchive
         }
         
-        let cardsXMLURL = resolvedImportedDataDir.appendingPathComponent("cards.xml", isDirectory: false)
-        guard FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
+        let cardsJSONURL = LibraryFile.jsonURL(in: resolvedImportedDataDir)
+        let cardsXMLURL = LibraryFile.xmlURL(in: resolvedImportedDataDir)
+        guard FileManager.default.fileExists(atPath: cardsJSONURL.path)
+                || FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
             throw DataManagerError.noCardsFound
         }
 
         try validateImportedDataDirectory(resolvedImportedDataDir)
 
-        let data = try Data(contentsOf: cardsXMLURL)
-        let cards = try CardXMLCodec.decodeCards(data: data)
+        let libraryURL = FileManager.default.fileExists(atPath: cardsJSONURL.path) ? cardsJSONURL : cardsXMLURL
+        let data = try Data(contentsOf: libraryURL)
+        let cards = try LibraryJSONCodec.decodeCardsFlexible(data: data)
         
         try await backupCurrentData()
         
@@ -150,6 +153,7 @@ struct DataManager {
         }
         
         try FileManager.default.copyItem(at: resolvedImportedDataDir, to: destinationDir)
+        _ = try LibraryJSONCodec.loadDocument(fromDirectory: destinationDir)
         
         return cards.count
     }
@@ -240,7 +244,9 @@ struct DataManager {
                 throw DataManagerError.unsafeArchive
             }
 
-            if relativePath == "cards.xml" {
+            if relativePath == LibraryFile.jsonName
+                || relativePath == LibraryFile.xmlName
+                || relativePath == LibraryFile.xmlMigratedName {
                 continue
             }
 
@@ -311,7 +317,8 @@ struct DataManager {
         This archive contains the following data:
         
         📁 LanguageTraining/
-        ├── cards.xml          # tags, cards, and study progress
+        ├── cards.json         # tags, cards, and study progress (JSON)
+        ├── cards.xml          # legacy (auto-migrated to cards.json on launch)
         └── audio/             # audio files in MP3 format
         
         

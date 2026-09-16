@@ -42,7 +42,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 
 ### Settings
 
-- Manage library tags: add, pick a color, or delete (tags live in `cards.xml` and sync with the library)
+- Manage library tags: add, pick a color, or delete (tags live in `cards.json` and sync with the library)
 
 ### Mac layout
 
@@ -52,6 +52,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 ### Data Management
 
 - Sync cards and audio through the iCloud Drive folder `LanguageTraining`
+- On launch, convert a legacy `cards.xml` library to `cards.json` and keep the old file as `cards.xml.migrated`
 - On iPhone, choose that folder once in Settings with the Files picker (Browse → iCloud Drive)
 - Fall back to local Application Support if iCloud Drive is unavailable
 - Copy an existing local Mac library into iCloud Drive once, if that folder is empty
@@ -60,7 +61,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 - Validate archive contents and card XML before replacing local data
 - Preserve compatibility with legacy EnglishCard exports
 - Back up existing data before import
-- Disable saving if the library file cannot be loaded, so `cards.xml` is not overwritten
+- Disable saving if the library file cannot be loaded, so `cards.json` is not overwritten
 - Load the iCloud library in the background and show “Loading library…” instead of freezing the UI
 
 ## Technical Overview
@@ -68,7 +69,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 - Language: Swift
 - UI framework: SwiftUI
 - Concurrency: Swift Concurrency with async/await
-- Storage: XML files and local audio files in iCloud Drive, with Application Support as a fallback
+- Storage: JSON library file (`cards.json`) and local audio files in iCloud Drive, with Application Support as a fallback
 - Secrets: OpenAI API keys are stored in Keychain on each device
 - Network: HTTPS-only API requests
 - Security: App Sandbox enabled on Mac, with outgoing network access and user-selected file access
@@ -105,6 +106,7 @@ LanguageTraining/
 ├── OpenAIClient.swift
 ├── AudioPlayerService.swift
 ├── CardXMLCodec.swift
+├── LibraryJSONCodec.swift
 ├── Keychain.swift
 ├── LanguageTraining.entitlements
 ├── Info.plist
@@ -184,7 +186,7 @@ Backups stay on the device:
 - Do not commit API keys, exported user data, or local build output.
 - The OpenAI API key is saved in Keychain on each device.
 - Custom API endpoints receive the same API key, so only use endpoints you trust.
-- Imported ZIP archives are validated, and `cards.xml` must decode successfully, before local data is replaced.
+- Imported ZIP archives are validated, and `cards.json` (or legacy `cards.xml`) must decode successfully, before local data is replaced.
 - If the library file is damaged, the app shows an error and blocks saving so existing data is not overwritten.
 - If two devices edit the library at the same time, iCloud keeps the last saved `cards.xml`. After saving on one device, wait for iCloud Drive to finish syncing before editing on the other.
 
@@ -206,13 +208,13 @@ Confirm that:
 - Those requests go to `{Base URL}/v1/chat/completions` and `{Base URL}/v1/audio/speech`
 - Both paths reject a non-`https` URL
 - `LanguageTraining/AppSettings.swift` and `LanguageTraining/Keychain.swift` save the key to Keychain (`service` `LanguageTraining`, `account` `OPENAI_API_KEY`)
-- The key is not written into `cards.xml`, ZIP exports, logs, or analytics
+- The key is not written into `cards.json`, ZIP exports, logs, or analytics
 
 The iPhone target uses the same Swift sources.
 
 ### 2. Confirm the key is not in library files
 
-After creating a card, open `cards.xml` in `iCloud Drive/LanguageTraining/` (or the local Application Support fallback). Search for `sk-` or a distinctive fragment of your key. It should not appear. Exported ZIP archives should also contain only card text and audio, not the key.
+After creating a card, open `cards.json` in `iCloud Drive/LanguageTraining/` (or the local Application Support fallback). Search for `sk-` or a distinctive fragment of your key. It should not appear. Exported ZIP archives should also contain only card text and audio, not the key.
 
 ### 3. Watch live traffic
 

@@ -102,7 +102,7 @@ struct SettingsView: View {
             }
 
             Section("Tags") {
-                Text("Colored tags are stored in the library (cards.xml) and sync with iCloud Drive. Assign them when saving, from each card’s dropdown, or from the Library context menu.")
+                Text("Colored tags are stored in the library (cards.json) and sync with iCloud Drive. Assign them when saving, from each card’s dropdown, or from the Library context menu.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
