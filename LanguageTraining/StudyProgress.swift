@@ -87,6 +87,70 @@ enum StudyGrade: String, Sendable {
     case good
 }
 
+struct StudyDayRecord: Identifiable, Hashable, Sendable {
+    /// Start of local calendar day.
+    var day: Date
+    var reviews: Int
+    var correct: Int
+
+    var id: Date { day }
+
+    var accuracy: Double {
+        guard reviews > 0 else { return 0 }
+        return Double(correct) / Double(reviews)
+    }
+
+    var dayKey: String {
+        StudyDayRecord.dayFormatter.string(from: day)
+    }
+
+    static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar.current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = Calendar.current.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static func startOfDay(_ date: Date, calendar: Calendar = .current) -> Date {
+        calendar.startOfDay(for: date)
+    }
+
+    static func parseDayKey(_ key: String, calendar: Calendar = .current) -> Date? {
+        guard let date = dayFormatter.date(from: key) else { return nil }
+        return calendar.startOfDay(for: date)
+    }
+}
+
+enum StudyDeckSegment: String, CaseIterable, Identifiable, Sendable {
+    case due
+    case new
+    case learning
+    case mastered
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .due: return "Due"
+        case .new: return "New"
+        case .learning: return "Learning"
+        case .mastered: return "Mastered"
+        }
+    }
+
+    var color: String {
+        // Hex used by SwiftUI Color(hex:)
+        switch self {
+        case .due: return "D97706"      // amber
+        case .new: return "64748B"      // slate
+        case .learning: return "0284C7" // sky
+        case .mastered: return "16A34A" // green
+        }
+    }
+}
+
 enum StudyScheduler {
     /// Build a review queue: due / weak cards first, with shuffle so order is not fixed.
     static func buildQueue(
@@ -158,6 +222,8 @@ struct StudyStatsSummary: Sendable {
     var studyableCards: Int
     var dueCount: Int
     var newCount: Int
+    var overdueCount: Int
+    var learningCount: Int
     var masteredCount: Int
     var reviewCount: Int
     var correctCount: Int
@@ -165,23 +231,45 @@ struct StudyStatsSummary: Sendable {
     var averageEase: Double
     var reviewedToday: Int
     var streakDays: Int
+    var recentDays: [StudyDayRecord]
 
     var accuracy: Double {
         guard reviewCount > 0 else { return 0 }
         return Double(correctCount) / Double(reviewCount)
     }
 
+    var masteryRate: Double {
+        guard studyableCards > 0 else { return 0 }
+        return Double(masteredCount) / Double(studyableCards)
+    }
+
+    var coverageRate: Double {
+        guard totalCards > 0 else { return 0 }
+        return Double(studyableCards) / Double(totalCards)
+    }
+
+    var deckSegments: [(segment: StudyDeckSegment, count: Int)] {
+        [
+            (.due, overdueCount),
+            (.new, newCount),
+            (.learning, learningCount),
+            (.mastered, masteredCount),
+        ]
+    }
+
     static func build(
         cards: [Card],
         progress: [UUID: StudyProgress],
+        dailyLog: [StudyDayRecord] = [],
         now: Date = Date()
     ) -> StudyStatsSummary {
         let studyable = cards.filter { CardStudyContent.canStudy($0) }
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: now)
 
-        var due = 0
         var neu = 0
+        var overdue = 0
+        var learning = 0
         var mastered = 0
         var reviews = 0
         var correct = 0
@@ -193,8 +281,16 @@ struct StudyStatsSummary: Sendable {
 
         for card in studyable {
             if let state = progress[card.id] {
-                if state.nextReviewAt <= now { due += 1 }
-                if state.repetitions >= 3 && state.intervalDays >= 21 { mastered += 1 }
+                let isMastered = state.repetitions >= 3 && state.intervalDays >= 21
+                if isMastered {
+                    mastered += 1
+                } else if state.reviewCount == 0 {
+                    neu += 1
+                } else if state.nextReviewAt <= now {
+                    overdue += 1
+                } else {
+                    learning += 1
+                }
                 reviews += state.reviewCount
                 correct += state.correctCount
                 incorrect += state.incorrectCount
@@ -206,23 +302,50 @@ struct StudyStatsSummary: Sendable {
                 }
             } else {
                 neu += 1
-                due += 1
             }
+        }
+
+        // Prefer persisted daily log; fill missing days for a stable 14-day chart.
+        let recent = paddedRecentDays(from: dailyLog, calendar: calendar, now: now, days: 14)
+        for record in dailyLog where record.reviews > 0 {
+            reviewDays.insert(calendar.dateComponents([.year, .month, .day], from: record.day))
         }
 
         return StudyStatsSummary(
             totalCards: cards.count,
             studyableCards: studyable.count,
-            dueCount: due,
+            dueCount: overdue + neu,
             newCount: neu,
+            overdueCount: overdue,
+            learningCount: learning,
             masteredCount: mastered,
             reviewCount: reviews,
             correctCount: correct,
             incorrectCount: incorrect,
             averageEase: easeN == 0 ? StudyProgress.defaultEase : easeSum / Double(easeN),
             reviewedToday: reviewedToday,
-            streakDays: streakLength(days: reviewDays, calendar: calendar, now: now)
+            streakDays: streakLength(days: reviewDays, calendar: calendar, now: now),
+            recentDays: recent
         )
+    }
+
+    private static func paddedRecentDays(
+        from log: [StudyDayRecord],
+        calendar: Calendar,
+        now: Date,
+        days: Int
+    ) -> [StudyDayRecord] {
+        let byDay = Dictionary(uniqueKeysWithValues: log.map { (calendar.startOfDay(for: $0.day), $0) })
+        var result: [StudyDayRecord] = []
+        for offset in stride(from: days - 1, through: 0, by: -1) {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: calendar.startOfDay(for: now)) else { continue }
+            if let existing = byDay[day] {
+                result.append(existing)
+            } else {
+                result.append(StudyDayRecord(day: day, reviews: 0, correct: 0))
+            }
+        }
+        return result
     }
 
     private static func streakLength(days: Set<DateComponents>, calendar: Calendar, now: Date) -> Int {

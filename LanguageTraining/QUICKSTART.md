@@ -153,7 +153,7 @@ In Settings, add tags, change their colors, or delete them. Deleting a tag also 
 3. Optionally filter by tag, then tap Start Study.
 4. Read the prompt, tap Show Answer (or the card), use Pronounce for English audio, then tap Again or Got it.
 5. Cards due for review and weaker cards appear earlier; order is shuffled a little so it does not feel fixed. Progress is stored in `cards.xml` under `<study>` and syncs with the library.
-6. The Study home screen shows due count, new cards, today’s reviews, streak, accuracy, and mastered cards.
+6. The Study home screen shows a visual dashboard: accuracy / mastery / coverage rings, a deck status bar (Due / New / Learning / Mastered), a 14-day activity chart, and streak.
 
 Study works best when Explanation Language is Japanese, so each card has a 自然な日本語訳 line.
 

@@ -51,7 +51,7 @@ struct StudyView: View {
     private var homeBody: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                statsGrid
+                StudyStatsDashboard(stats: stats)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Mode")
@@ -105,40 +105,6 @@ struct StudyView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color.appTextBackground.opacity(0.35))
-    }
-
-    private var statsGrid: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Statistics")
-                .font(.headline)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                statTile("Due now", value: "\(stats.dueCount)")
-                statTile("New", value: "\(stats.newCount)")
-                statTile("Today", value: "\(stats.reviewedToday)")
-                statTile("Streak", value: "\(stats.streakDays) day\(stats.streakDays == 1 ? "" : "s")")
-                statTile("Accuracy", value: percent(stats.accuracy))
-                statTile("Mastered", value: "\(stats.masteredCount)")
-                statTile("Reviews", value: "\(stats.reviewCount)")
-                statTile("Studyable", value: "\(stats.studyableCards)/\(stats.totalCards)")
-            }
-        }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.appTextBackground))
-    }
-
-    private func statTile(_ title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.title3.weight(.semibold))
-                .monospacedDigit()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
     }
 
     @ViewBuilder
@@ -383,10 +349,5 @@ struct StudyView: View {
         let trimmed = settings.openAIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let base = URL(string: trimmed) else { throw OpenAIError.invalidBaseURL }
         return OpenAIClient(baseURL: base, apiKey: settings.apiKey, model: settings.openAIModel)
-    }
-
-    private func percent(_ value: Double) -> String {
-        guard value > 0 || stats.reviewCount > 0 else { return "—" }
-        return "\(Int((value * 100).rounded()))%"
     }
 }

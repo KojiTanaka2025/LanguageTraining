@@ -18,6 +18,7 @@ final class CardStore: ObservableObject {
     @Published private(set) var cards: [Card] = []
     @Published private(set) var tags: [LibraryTag] = LibraryTag.builtInDefaults
     @Published private(set) var studyProgress: [UUID: StudyProgress] = [:]
+    @Published private(set) var studyDailyLog: [StudyDayRecord] = []
     @Published var lastLoadedAt: Date? = nil
     @Published private(set) var loadErrorMessage: String? = nil
     @Published private(set) var isUsingiCloud = false
@@ -119,11 +120,29 @@ final class CardStore: ObservableObject {
         try mutatingWithRollback {
             let current = studyProgress[cardID] ?? StudyProgress.fresh(cardID: cardID)
             studyProgress[cardID] = StudyScheduler.apply(grade: grade, to: current)
+            let day = StudyDayRecord.startOfDay(Date())
+            if let index = studyDailyLog.firstIndex(where: { $0.day == day }) {
+                studyDailyLog[index].reviews += 1
+                if grade == .good {
+                    studyDailyLog[index].correct += 1
+                }
+            } else {
+                studyDailyLog.append(
+                    StudyDayRecord(
+                        day: day,
+                        reviews: 1,
+                        correct: grade == .good ? 1 : 0
+                    )
+                )
+            }
+            // Keep about three months of daily history.
+            let cutoff = Calendar.current.date(byAdding: .day, value: -90, to: day) ?? day
+            studyDailyLog.removeAll { $0.day < cutoff }
         }
     }
 
     var studyStats: StudyStatsSummary {
-        StudyStatsSummary.build(cards: cards, progress: studyProgress)
+        StudyStatsSummary.build(cards: cards, progress: studyProgress, dailyLog: studyDailyLog)
     }
 
     func studyQueue(limit: Int = 40, tagFilter: String? = nil) -> [UUID] {
@@ -185,7 +204,8 @@ final class CardStore: ObservableObject {
         let data = try CardXMLCodec.encode(
             tags: tags,
             cards: cards,
-            studyProgress: Array(studyProgress.values)
+            studyProgress: Array(studyProgress.values),
+            studyDailyLog: studyDailyLog
         )
         lastPersistedData = data
         try CoordinatedFile.writeData(data, to: url)
@@ -217,6 +237,7 @@ final class CardStore: ObservableObject {
         cards = snapshot.cards
         tags = snapshot.tags
         studyProgress = Dictionary(uniqueKeysWithValues: snapshot.studyProgress.map { ($0.cardID, $0) })
+        studyDailyLog = snapshot.studyDailyLog
         lastPersistedData = snapshot.persistedData
         lastLoadedAt = Date()
         loadErrorMessage = nil
@@ -259,6 +280,7 @@ final class CardStore: ObservableObject {
         let previousCards = cards
         let previousTags = tags
         let previousStudy = studyProgress
+        let previousDaily = studyDailyLog
         do {
             try mutate()
             try persist()
@@ -266,6 +288,7 @@ final class CardStore: ObservableObject {
             cards = previousCards
             tags = previousTags
             studyProgress = previousStudy
+            studyDailyLog = previousDaily
             throw error
         }
     }
@@ -311,6 +334,7 @@ final class CardStore: ObservableObject {
             cards = snapshot.cards
             tags = snapshot.tags
             studyProgress = Dictionary(uniqueKeysWithValues: snapshot.studyProgress.map { ($0.cardID, $0) })
+            studyDailyLog = snapshot.studyDailyLog
             lastPersistedData = snapshot.persistedData
             lastLoadedAt = Date()
             isUsingiCloud = snapshot.isUsingiCloud
@@ -324,6 +348,7 @@ private struct LibrarySnapshot: Sendable {
     var tags: [LibraryTag]
     var cards: [Card]
     var studyProgress: [StudyProgress]
+    var studyDailyLog: [StudyDayRecord]
     var persistedData: Data?
     var isUsingiCloud: Bool
 
@@ -337,6 +362,7 @@ private struct LibrarySnapshot: Sendable {
                 tags: document.tags,
                 cards: document.cards,
                 studyProgress: document.studyProgress,
+                studyDailyLog: document.studyDailyLog,
                 persistedData: data,
                 isUsingiCloud: AppStorage.isUsingiCloud
             )
@@ -345,6 +371,7 @@ private struct LibrarySnapshot: Sendable {
             tags: LibraryTag.builtInDefaults,
             cards: [],
             studyProgress: [],
+            studyDailyLog: [],
             persistedData: nil,
             isUsingiCloud: AppStorage.isUsingiCloud
         )

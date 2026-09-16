@@ -21,11 +21,13 @@ struct LibraryDocument: Sendable {
     var tags: [LibraryTag]
     var cards: [Card]
     var studyProgress: [StudyProgress]
+    var studyDailyLog: [StudyDayRecord]
 
     static func seeded(
         cards: [Card],
         tags: [LibraryTag] = [],
         studyProgress: [StudyProgress] = [],
+        studyDailyLog: [StudyDayRecord] = [],
         extraNames: [String] = []
     ) -> LibraryDocument {
         let catalog = tags.isEmpty ? LibraryTag.builtInDefaults : tags
@@ -34,7 +36,8 @@ struct LibraryDocument: Sendable {
         return LibraryDocument(
             tags: LibraryTag.mergedCatalog(existing: catalog, usedNames: used),
             cards: cards,
-            studyProgress: studyProgress.filter { knownIDs.contains($0.cardID) }
+            studyProgress: studyProgress.filter { knownIDs.contains($0.cardID) },
+            studyDailyLog: studyDailyLog
         )
     }
 }
@@ -43,8 +46,18 @@ enum CardXMLCodec {
     static let rootName = "englishCard"
     static let version = "1"
 
-    static func encode(tags: [LibraryTag], cards: [Card], studyProgress: [StudyProgress] = []) throws -> Data {
-        try encode(LibraryDocument(tags: tags, cards: cards, studyProgress: studyProgress))
+    static func encode(
+        tags: [LibraryTag],
+        cards: [Card],
+        studyProgress: [StudyProgress] = [],
+        studyDailyLog: [StudyDayRecord] = []
+    ) throws -> Data {
+        try encode(LibraryDocument(
+            tags: tags,
+            cards: cards,
+            studyProgress: studyProgress,
+            studyDailyLog: studyDailyLog
+        ))
     }
 
     static func encode(_ document: LibraryDocument) throws -> Data {
@@ -103,6 +116,10 @@ enum CardXMLCodec {
             xml += "/>\n"
         }
 
+        for day in document.studyDailyLog.sorted(by: { $0.day < $1.day }) {
+            xml += "    <day date=\"\(escapeAttribute(day.dayKey))\" reviews=\"\(day.reviews)\" correct=\"\(day.correct)\"/>\n"
+        }
+
         xml += """
           </study>
         </EnglishCardData>
@@ -142,7 +159,8 @@ enum CardXMLCodec {
         return LibraryDocument.seeded(
             cards: cards,
             tags: delegate.tags,
-            studyProgress: delegate.studyProgress
+            studyProgress: delegate.studyProgress,
+            studyDailyLog: delegate.studyDailyLog
         )
     }
 
@@ -188,6 +206,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
     var tags: [LibraryTag] = []
     var cards: [Card] = []
     var studyProgress: [StudyProgress] = []
+    var studyDailyLog: [StudyDayRecord] = []
     var sawRoot = false
     var sawCards = false
     var cardNodeCount = 0
@@ -242,6 +261,13 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
                     incorrectCount: max(0, incorrectCount)
                 )
             )
+            return
+        }
+        if elementName == "day" {
+            guard let day = StudyDayRecord.parseDayKey(attributeDict["date"] ?? "") else { return }
+            let reviews = Int(attributeDict["reviews"] ?? "") ?? 0
+            let correct = Int(attributeDict["correct"] ?? "") ?? 0
+            studyDailyLog.append(StudyDayRecord(day: day, reviews: max(0, reviews), correct: max(0, correct)))
             return
         }
         if elementName == "card" {

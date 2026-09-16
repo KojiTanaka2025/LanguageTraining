@@ -38,7 +38,7 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 
 - Flip through library cards in two modes: Japanese → English + pronunciation, or English + pronunciation → Japanese
 - Order cards with spaced repetition (due and weaker cards first, with light randomness)
-- Track accuracy, streak, due count, and mastered cards on the Study tab
+- Track accuracy, streak, due count, and mastered cards on the Study tab with rings, a composition bar, and a 14-day chart
 
 ### Settings
 
@@ -98,6 +98,7 @@ LanguageTraining/
 ├── StudyProgress.swift
 ├── CardStudyContent.swift
 ├── StudyView.swift
+├── StudyStatsDashboard.swift
 ├── CardStore.swift
 ├── AppSettings.swift
 ├── AppStorage.swift
