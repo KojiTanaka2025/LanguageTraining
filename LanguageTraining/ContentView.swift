@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 private enum AppTab: Hashable {
     case explain
     case library
+    case study
     case settings
 }
 
@@ -21,6 +22,10 @@ struct ContentView: View {
 
             Tab("Library", systemImage: "books.vertical", value: .library) {
                 LibraryView()
+            }
+
+            Tab("Study", systemImage: "rectangle.on.rectangle.angled", value: .study) {
+                StudyView()
             }
 
             #if os(iOS)

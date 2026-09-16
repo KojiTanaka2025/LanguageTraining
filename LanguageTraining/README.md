@@ -34,6 +34,12 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 - Copy source text or delete a card from the context menu
 - Delete a card with the Delete key on Mac, or swipe to delete on iPhone
 
+### Study
+
+- Flip through library cards in two modes: Japanese → English + pronunciation, or English + pronunciation → Japanese
+- Order cards with spaced repetition (due and weaker cards first, with light randomness)
+- Track accuracy, streak, due count, and mastered cards on the Study tab with rings, a composition bar, and a 14-day chart
+
 ### Settings
 
 - Manage library tags: add, pick a color, or delete (tags live in `cards.xml` and sync with the library)
@@ -89,6 +95,10 @@ LanguageTraining/
 ├── ZipArchive.swift
 ├── Card.swift
 ├── LibraryTag.swift
+├── StudyProgress.swift
+├── CardStudyContent.swift
+├── StudyView.swift
+├── StudyStatsDashboard.swift
 ├── CardStore.swift
 ├── AppSettings.swift
 ├── AppStorage.swift
