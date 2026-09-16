@@ -139,6 +139,7 @@ LanguageTraining/
 │   ├── StudyStatsDashboard.swift
 │   ├── CardStore.swift
 │   ├── CardXMLCodec.swift
+│   ├── LibraryJSONCodec.swift
 │   ├── OpenAIClient.swift
 │   ├── AppSettings.swift
 │   ├── AppStorage.swift
@@ -170,5 +171,5 @@ This project is licensed under the [MIT License](LICENSE).
 
 - Do not commit API keys or local user data.
 - Signing uses an Apple Development certificate, which is enough for personal use on this Mac and on an iPhone registered to the same team.
-- If Mac and iPhone edit the library at the same time, the last saved `cards.xml` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.
+- If Mac and iPhone edit the library at the same time, the last saved `cards.json` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.
 - To check that the app does not send your API key anywhere except the OpenAI Base URL you configured, see [Verify that the app does not misuse the API key](LanguageTraining/README.md#verify-that-the-app-does-not-misuse-the-api-key).

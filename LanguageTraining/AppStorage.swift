@@ -72,9 +72,11 @@ enum AppStorage {
             }
         }
 
-        let cardsURL = url.appendingPathComponent("cards.xml", isDirectory: false)
+        let cardsURL = url.appendingPathComponent(LibraryFile.jsonName, isDirectory: false)
+        let legacyCardsURL = url.appendingPathComponent(LibraryFile.xmlName, isDirectory: false)
         let usesSubfolder = url.lastPathComponent != appName
             && !FileManager.default.fileExists(atPath: cardsURL.path)
+            && !FileManager.default.fileExists(atPath: legacyCardsURL.path)
         let libraryURL = usesSubfolder
             ? url.appendingPathComponent(appName, isDirectory: true)
             : url
@@ -183,13 +185,11 @@ enum AppStorage {
     }
 
     private static func migrateLocalLibraryIfNeeded(from localURL: URL, to sharedURL: URL) throws {
-        let sharedCards = sharedURL.appendingPathComponent("cards.xml", isDirectory: false)
-        if FileManager.default.fileExists(atPath: sharedCards.path) {
+        if LibraryFile.hasLibraryData(in: sharedURL) {
             return
         }
 
-        let localCards = localURL.appendingPathComponent("cards.xml", isDirectory: false)
-        guard FileManager.default.fileExists(atPath: localCards.path) else { return }
+        guard LibraryFile.hasLibraryData(in: localURL) else { return }
         guard FileManager.default.fileExists(atPath: localURL.path) else { return }
 
         if FileManager.default.fileExists(atPath: sharedURL.path) {

@@ -58,13 +58,17 @@ enum LibraryArchive {
             throw LibraryArchiveError.invalidArchive
         }
 
-        let cardsXMLURL = resolvedImportedDataDir.appendingPathComponent("cards.xml", isDirectory: false)
-        guard FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
+        let cardsJSONURL = LibraryFile.jsonURL(in: resolvedImportedDataDir)
+        let cardsXMLURL = LibraryFile.xmlURL(in: resolvedImportedDataDir)
+        guard FileManager.default.fileExists(atPath: cardsJSONURL.path)
+                || FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
             throw LibraryArchiveError.noCardsFound
         }
 
         try validateImportedDataDirectory(resolvedImportedDataDir)
-        let cards = try CardXMLCodec.decodeCards(data: try Data(contentsOf: cardsXMLURL))
+
+        let libraryURL = FileManager.default.fileExists(atPath: cardsJSONURL.path) ? cardsJSONURL : cardsXMLURL
+        let cards = try LibraryJSONCodec.decodeCardsFlexible(data: try Data(contentsOf: libraryURL))
         try backupCurrentData()
 
         let destinationDir = try AppStorage.dataDirectoryURL()
@@ -72,6 +76,8 @@ enum LibraryArchive {
             try CoordinatedFile.removeItem(at: destinationDir)
         }
         try FileManager.default.copyItem(at: resolvedImportedDataDir, to: destinationDir)
+        // Ensure the active library file is JSON after import.
+        _ = try LibraryJSONCodec.loadDocument(fromDirectory: destinationDir)
         return cards.count
     }
 
@@ -163,7 +169,9 @@ enum LibraryArchive {
             guard values.isRegularFile == true else {
                 throw LibraryArchiveError.unsafeArchive
             }
-            if relativePath == "cards.xml" {
+            if relativePath == LibraryFile.jsonName
+                || relativePath == LibraryFile.xmlName
+                || relativePath == LibraryFile.xmlMigratedName {
                 continue
             }
             if relativePath.hasPrefix("audio/"), itemURL.pathExtension.lowercased() == "mp3" {

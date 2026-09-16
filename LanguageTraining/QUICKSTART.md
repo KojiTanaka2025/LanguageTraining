@@ -38,7 +38,7 @@ Use the same Apple ID on Mac and iPhone, with iCloud Drive turned on. Sharing us
 
 If iCloud Drive is off, or the iPhone has not chosen the folder yet, each device keeps its own local library.
 
-The first time a device opens a shared library, Library may show “Loading library…” while iCloud Drive downloads `cards.xml` and audio. The app stays usable while that finishes.
+The first time a device opens a shared library, Library may show “Loading library…” while iCloud Drive downloads `cards.json` and audio. The app stays usable while that finishes.
 
 The API key is stored in Keychain on each device. Enter it once on Mac and once on iPhone.
 
@@ -61,7 +61,8 @@ The Files picker may show On My iPhone, Google Drive, or other locations without
 4. Keep the default model unless you need a different one.
 5. Keep the Base URL as `https://api.openai.com` unless you use a trusted OpenAI-compatible provider.
 6. Optionally set Explanation Language. Japanese is the verified setting for Japanese learners of English. Other languages are available but have not been checked in use.
-7. Click Save.
+7. On Mac, use **Open Library Folder in Finder** to reveal the folder that stores `cards.json` and audio.
+8. Click Save.
 
 ### iPhone
 
@@ -130,7 +131,7 @@ Choose a colored tag before saving (defaults include 仕事用 and 日常会話,
 
 Turn off Save audio if you do not want to store pronunciation with the card.
 
-Saved cards include the original text, explanation, tag, creation date, and audio when available. The tag catalog (names and colors) is stored in `cards.xml` with the cards, so it syncs through iCloud Drive. If iCloud Drive sharing is set up, the new card appears on the other device after it uploads.
+Saved cards include the original text, explanation, tag, creation date, and audio when available. The tag catalog (names and colors) is stored in `cards.json` with the cards, so it syncs through iCloud Drive. If iCloud Drive sharing is set up, the new card appears on the other device after it uploads.
 
 ## Review Saved Cards
 
@@ -152,7 +153,7 @@ In Settings, add tags, change their colors, or delete them. Deleting a tag also 
    - 英語＋発音 → 日本語
 3. Optionally filter by tag, then tap Start Study.
 4. Read the prompt, tap Show Answer (or the card), use Pronounce for English audio, then tap Again or Got it.
-5. Cards due for review and weaker cards appear earlier; order is shuffled a little so it does not feel fixed. Progress is stored in `cards.xml` under `<study>` and syncs with the library.
+5. Cards due for review and weaker cards appear earlier; order is shuffled a little so it does not feel fixed. Progress is stored in `cards.json` under `study` and syncs with the library. Existing `cards.xml` libraries are converted to JSON on launch; the old file is kept as `cards.xml.migrated`.
 6. The Study home screen shows a visual dashboard: accuracy / mastery / coverage rings, a deck status bar (Due / New / Learning / Mastered), a 14-day activity chart, and streak.
 
 Study works best when Explanation Language is Japanese, so each card has a 自然な日本語訳 line.
@@ -192,13 +193,13 @@ Legacy data may exist here:
 
 Use Settings to export or import learning data as a ZIP archive. Importing an archive validates the files first and backs up existing data automatically.
 
-If the library cannot be loaded, the app shows an error and disables saving so your existing `cards.xml` is not overwritten. Use Retry after fixing the file, or restore a backup from:
+If the library cannot be loaded, the app shows an error and disables saving so your existing `cards.json` is not overwritten. Use Retry after fixing the file, or restore a backup from:
 
 ```text
 ~/Library/Application Support/LanguageTraining_Backups/
 ```
 
-Avoid editing the library on Mac and iPhone at the same time. The last saved `cards.xml` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.
+Avoid editing the library on Mac and iPhone at the same time. The last saved `cards.json` wins. After saving on one device, wait until iCloud Drive finishes syncing before editing on the other.
 
 ## Troubleshooting
 
@@ -238,7 +239,7 @@ Check `NETWORK_TROUBLESHOOTING.md` for network and App Sandbox diagnostics.
 
 ### Confirm The API Key Is Not Misused
 
-See [Verify that the app does not misuse the API key](README.md#verify-that-the-app-does-not-misuse-the-api-key) in the app notes. In short: search the Swift sources for `Bearer`, confirm `cards.xml` does not contain the key, capture HTTPS while you click Explain, and compare that with the OpenAI usage dashboard.
+See [Verify that the app does not misuse the API key](README.md#verify-that-the-app-does-not-misuse-the-api-key) in the app notes. In short: search the Swift sources for `Bearer`, confirm `cards.json` does not contain the key, capture HTTPS while you click Explain, and compare that with the OpenAI usage dashboard.
 
 ## Study Tips
 

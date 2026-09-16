@@ -131,15 +131,18 @@ struct DataManager {
             throw DataManagerError.invalidArchive
         }
         
-        let cardsXMLURL = resolvedImportedDataDir.appendingPathComponent("cards.xml", isDirectory: false)
-        guard FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
+        let cardsJSONURL = LibraryFile.jsonURL(in: resolvedImportedDataDir)
+        let cardsXMLURL = LibraryFile.xmlURL(in: resolvedImportedDataDir)
+        guard FileManager.default.fileExists(atPath: cardsJSONURL.path)
+                || FileManager.default.fileExists(atPath: cardsXMLURL.path) else {
             throw DataManagerError.noCardsFound
         }
 
         try validateImportedDataDirectory(resolvedImportedDataDir)
 
-        let data = try Data(contentsOf: cardsXMLURL)
-        let cards = try CardXMLCodec.decodeCards(data: data)
+        let libraryURL = FileManager.default.fileExists(atPath: cardsJSONURL.path) ? cardsJSONURL : cardsXMLURL
+        let data = try Data(contentsOf: libraryURL)
+        let cards = try LibraryJSONCodec.decodeCardsFlexible(data: data)
         
         try await backupCurrentData()
         
@@ -150,6 +153,7 @@ struct DataManager {
         }
         
         try FileManager.default.copyItem(at: resolvedImportedDataDir, to: destinationDir)
+        _ = try LibraryJSONCodec.loadDocument(fromDirectory: destinationDir)
         
         return cards.count
     }
@@ -240,7 +244,9 @@ struct DataManager {
                 throw DataManagerError.unsafeArchive
             }
 
-            if relativePath == "cards.xml" {
+            if relativePath == LibraryFile.jsonName
+                || relativePath == LibraryFile.xmlName
+                || relativePath == LibraryFile.xmlMigratedName {
                 continue
             }
 
@@ -255,21 +261,30 @@ struct DataManager {
     
     // MARK: - Finderで表示
     
-    /// データフォルダをFinderで開く
+    /// データフォルダをFinderで開く（可能なら cards.json を選択）
     static func revealDataFolder() throws {
-        let appSupportURL = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
         let dataDir = try AppStorage.dataDirectoryURL()
-        
-        if FileManager.default.fileExists(atPath: dataDir.path) {
-            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: dataDir.path)
+        try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+
+        let jsonURL = LibraryFile.jsonURL(in: dataDir)
+        let xmlURL = LibraryFile.xmlURL(in: dataDir)
+        let migratedURL = dataDir.appendingPathComponent(LibraryFile.xmlMigratedName, isDirectory: false)
+
+        let target: URL
+        if FileManager.default.fileExists(atPath: jsonURL.path) {
+            target = jsonURL
+        } else if FileManager.default.fileExists(atPath: xmlURL.path) {
+            target = xmlURL
+        } else if FileManager.default.fileExists(atPath: migratedURL.path) {
+            target = migratedURL
         } else {
-            // フォルダがない場合は親ディレクトリを開く
-            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: appSupportURL.path)
+            target = dataDir
+        }
+
+        if target.hasDirectoryPath {
+            NSWorkspace.shared.open(target)
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting([target])
         }
     }
     
@@ -311,7 +326,8 @@ struct DataManager {
         This archive contains the following data:
         
         📁 LanguageTraining/
-        ├── cards.xml          # tags, cards, and study progress
+        ├── cards.json         # tags, cards, and study progress (JSON)
+        ├── cards.xml          # legacy (auto-migrated to cards.json on launch)
         └── audio/             # audio files in MP3 format
         
         

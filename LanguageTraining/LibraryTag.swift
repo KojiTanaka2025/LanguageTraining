@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// A named, colored tag stored in the library (`cards.xml`) and assigned to cards.
+/// A named, colored tag stored in the library (`cards.json`) and assigned to cards.
 struct LibraryTag: Identifiable, Hashable, Sendable {
     let id: UUID
     var name: String
