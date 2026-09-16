@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/KojiTanaka2025/LanguageTraining/docs/schema/cards.schema.json",
+  "title": "LanguageTraining Library (cards.json)",
+  "description": "Canonical interchange format shared by the native and web apps. Spec: docs/SHARED_SPEC.md",
+  "type": "object",
+  "required": ["version", "tags", "cards", "study"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": ["1", "2"],
+      "description": "Current writers should emit \"2\"."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tag" }
+    },
+    "cards": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/card" }
+    },
+    "study": {
+      "type": "object",
+      "required": ["progress", "days"],
+      "additionalProperties": true,
+      "properties": {
+        "progress": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/progress" }
+        },
+        "days": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dayLog" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "iso8601": {
+      "type": "string",
+      "description": "ISO-8601 date-time; fractional seconds allowed."
+    },
+    "uuid": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36
+    },
+    "colorHex": {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]{6}$",
+      "description": "RGB hex without #."
+    },
+    "tag": {
+      "type": "object",
+      "required": ["id", "name", "color"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/colorHex" }
+      }
+    },
+    "vocabularyItem": {
+      "type": "object",
+      "required": ["english", "gloss", "collocations"],
+      "additionalProperties": true,
+      "properties": {
+        "english": { "type": "string" },
+        "gloss": { "type": "string" },
+        "collocations": { "type": "string" }
+      }
+    },
+    "exampleItem": {
+      "type": "object",
+      "required": ["sentence", "meaning"],
+      "additionalProperties": true,
+      "properties": {
+        "sentence": { "type": "string" },
+        "meaning": { "type": "string" }
+      }
+    },
+    "explanation": {
+      "type": "object",
+      "required": [
+        "translation",
+        "pronunciation",
+        "structure",
+        "grammar",
+        "vocabulary",
+        "examples",
+        "notes",
+        "summary"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "translation": {
+          "type": "object",
+          "required": ["japanese", "naturalEnglish", "usage", "formality"],
+          "additionalProperties": true,
+          "properties": {
+            "japanese": { "type": "string" },
+            "naturalEnglish": { "type": "string" },
+            "usage": { "type": "string" },
+            "formality": { "type": "string" }
+          }
+        },
+        "pronunciation": {
+          "type": "object",
+          "required": ["stress", "tips"],
+          "additionalProperties": true,
+          "properties": {
+            "stress": { "type": "string" },
+            "tips": { "type": "string" }
+          }
+        },
+        "structure": {
+          "type": "object",
+          "required": ["kind", "parts", "pattern"],
+          "additionalProperties": true,
+          "properties": {
+            "kind": { "type": "string" },
+            "parts": { "type": "string" },
+            "pattern": { "type": "string" }
+          }
+        },
+        "grammar": {
+          "type": "object",
+          "required": ["tense", "articles", "prepositions", "other", "why"],
+          "additionalProperties": true,
+          "properties": {
+            "tense": { "type": "string" },
+            "articles": { "type": "string" },
+            "prepositions": { "type": "string" },
+            "other": { "type": "string" },
+            "why": { "type": "string" }
+          }
+        },
+        "vocabulary": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/vocabularyItem" }
+        },
+        "examples": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/exampleItem" }
+        },
+        "notes": {
+          "type": "object",
+          "required": ["similar", "mistakes"],
+          "additionalProperties": true,
+          "properties": {
+            "similar": { "type": "string" },
+            "mistakes": { "type": "string" }
+          }
+        },
+        "summary": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "costFooter": { "type": "string" }
+      }
+    },
+    "card": {
+      "type": "object",
+      "required": ["id", "createdAt", "sourceText", "markdown"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "createdAt": { "$ref": "#/$defs/iso8601" },
+        "sourceText": { "type": "string" },
+        "markdown": { "type": "string" },
+        "explanation": { "$ref": "#/$defs/explanation" },
+        "audioFileName": {
+          "type": ["string", "null"],
+          "description": "Basename only, must end with .mp3"
+        },
+        "category": {
+          "type": ["string", "null"],
+          "description": "Tag name; empty or omitted means uncategorized"
+        }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "required": [
+        "cardId",
+        "easeFactor",
+        "intervalDays",
+        "repetitions",
+        "nextReviewAt",
+        "reviewCount",
+        "correctCount",
+        "incorrectCount"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "cardId": { "$ref": "#/$defs/uuid" },
+        "easeFactor": { "type": "number", "minimum": 1.3 },
+        "intervalDays": { "type": "number", "minimum": 0 },
+        "repetitions": { "type": "integer", "minimum": 0 },
+        "nextReviewAt": { "$ref": "#/$defs/iso8601" },
+        "lastReviewedAt": { "type": ["string", "null"] },
+        "reviewCount": { "type": "integer", "minimum": 0 },
+        "correctCount": { "type": "integer", "minimum": 0 },
+        "incorrectCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dayLog": {
+      "type": "object",
+      "required": ["date", "reviews", "correct"],
+      "additionalProperties": true,
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "reviews": { "type": "integer", "minimum": 0 },
+        "correct": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

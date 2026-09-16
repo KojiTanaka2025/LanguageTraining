@@ -4,6 +4,15 @@ LanguageTraining is a macOS and iPhone app for creating language-learning cards 
 
 The project was originally named EnglishCard and was renamed to LanguageTraining. Some legacy identifiers remain intentionally so existing local data and Keychain entries can be migrated.
 
+## Shared specification
+
+Native (this repo) and the planned Linux web app (separate repository) share one product spec:
+
+- [`docs/SHARED_SPEC.md`](docs/SHARED_SPEC.md) — functional and Study/OpenAI behavior
+- [`docs/schema/cards.schema.json`](docs/schema/cards.schema.json) — `cards.json` interchange schema
+
+Keep those files in sync when changing card data or Study rules.
+
 ## Features
 
 - Create learning cards from pasted or clipboard text
