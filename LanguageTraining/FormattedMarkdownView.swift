@@ -341,7 +341,7 @@ private enum MarkdownFormatter {
             string: marker + "  ",
             attributes: [
                 .font: ReadingFont.body(size: ReadingMetrics.bodySize),
-                .foregroundColor: ReadingPalette.faint,
+                .foregroundColor: ReadingPalette.muted,
                 .paragraphStyle: paragraphStyle,
                 .ligature: 1
             ]
@@ -351,16 +351,18 @@ private enum MarkdownFormatter {
     }
 
     private static func formatLabeledContent(_ content: String, paragraphStyle: NSParagraphStyle) -> NSAttributedString {
-        if let colon = content.firstIndex(of: ":") {
+        let colonIndex = content.firstIndex(of: ":") ?? content.firstIndex(of: "：")
+        if let colon = colonIndex {
             let label = String(content[..<colon]).trimmingCharacters(in: .whitespaces)
             let remainder = String(content[colon...])
             if !label.isEmpty, label.count <= 40, !label.contains("**") {
                 let result = NSMutableAttributedString()
+                // Field labels act as mini-headings; keep them as strong as body text.
                 result.append(formatInlineStyles(
                     label,
                     paragraphStyle: paragraphStyle,
                     font: ReadingFont.body(size: ReadingMetrics.bodySize, bold: true),
-                    color: ReadingPalette.muted
+                    color: ReadingPalette.ink
                 ))
                 result.append(formatInlineStyles(
                     remainder,
