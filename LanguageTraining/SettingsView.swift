@@ -211,6 +211,7 @@ struct SettingsView: View {
         #if os(macOS)
         .frame(minWidth: 480, minHeight: 360)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(ResizableWindowConfigurer(minWidth: 480, minHeight: 360))
         #endif
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {

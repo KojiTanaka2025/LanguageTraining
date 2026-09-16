@@ -23,17 +23,22 @@ struct LanguageTrainingApp: App {
         .restorationBehavior(.disabled)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            SettingsWindowCommands()
         }
 
-        Settings {
+        // Use a normal Window instead of Settings { }, which macOS often makes non-resizable.
+        Window("Settings", id: "settings") {
             SettingsView()
                 .environmentObject(store)
                 .environmentObject(settings)
                 .frame(minWidth: 480, minHeight: 360)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(ResizableWindowConfigurer(minWidth: 480, minHeight: 360))
         }
         .defaultSize(width: 580, height: 720)
         .windowResizability(.contentMinSize)
+        .windowStyle(.automatic)
+        .commandsRemoved()
     }
 }
 
