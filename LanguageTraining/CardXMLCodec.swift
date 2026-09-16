@@ -92,6 +92,11 @@ enum CardXMLCodec {
             xml += ">\n"
             xml += "      <sourceText>\(escapeText(card.sourceText))</sourceText>\n"
             xml += "      <markdown>\(escapeText(card.markdown))</markdown>\n"
+            if let explanation = card.explanation,
+               let data = try? JSONEncoder().encode(explanation),
+               let json = String(data: data, encoding: .utf8) {
+                xml += "      <explanationJson>\(escapeText(json))</explanationJson>\n"
+            }
             xml += "    </card>\n"
         }
 
@@ -218,6 +223,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentCategory = ""
     private var currentSourceText = ""
     private var currentMarkdown = ""
+    private var currentExplanationJSON = ""
     private var currentElement: String?
     private var textBuffer = ""
 
@@ -278,6 +284,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
             currentCategory = LibraryTag.normalizedName(attributeDict["category"])
             currentSourceText = ""
             currentMarkdown = ""
+            currentExplanationJSON = ""
         }
         currentElement = elementName
         textBuffer = ""
@@ -298,13 +305,20 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
             currentSourceText = textBuffer
         } else if elementName == "markdown" {
             currentMarkdown = textBuffer
+        } else if elementName == "explanationJson" {
+            currentExplanationJSON = textBuffer
         } else if elementName == "card" {
             if let id = currentID, let createdAt = currentCreatedAt {
+                var structured: CardExplanation?
+                if let data = currentExplanationJSON.data(using: .utf8) {
+                    structured = try? JSONDecoder().decode(CardExplanation.self, from: data)
+                }
                 cards.append(Card(
                     id: id,
                     createdAt: createdAt,
                     sourceText: currentSourceText,
                     markdown: currentMarkdown,
+                    explanation: structured,
                     audioFileName: Card.sanitizedAudioFileName(currentAudioFileName),
                     category: currentCategory
                 ))
@@ -313,6 +327,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
             currentCreatedAt = nil
             currentAudioFileName = nil
             currentCategory = ""
+            currentExplanationJSON = ""
         }
         currentElement = nil
         textBuffer = ""

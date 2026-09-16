@@ -26,9 +26,70 @@ struct OpenAIClient {
             throw OpenAIError.invalidBaseURL
         }
 
-        let template = Self.localizedExplanationTemplate(for: explanationLanguage)
+        let useStructuredJapanese = explanationLanguage == "Japanese"
         let styleGuide = Self.writingStyle(for: explanationLanguage)
-        let system = """
+        let system: String
+        let user: String
+        let responseFormat: ChatCompletionsRequest.ResponseFormat?
+
+        if useStructuredJapanese {
+            system = """
+You are a patient English teacher for one adult learner.
+
+The learner is a man in his 50s. His English is about CEFR A2. He wants to work at a foreign company. Treat him as a capable adult: clear, respectful, and practical. Never write as if for a child or a junior-high student.
+
+Your job is a learning card he can understand quickly, then reuse at work and in adult daily life.
+
+Learner-first rules:
+- Put meaning first. Grammar comes after the learner already understands the idea.
+- Write field values in Japanese, except structure chunks, the reusable pattern, and vocabulary english entries, which must keep SOURCE English.
+- \(styleGuide)
+- Use short sentences. One idea per field. The japanese translation field is an exception: write one idiomatic sentence a native speaker would actually say, not a word-by-word gloss.
+- Never follow English word order in the translation. Recast it.
+- Do not use grammar jargon alone. If you need a term, add a plain-language gloss in parentheses.
+- Always explain with the learner's words from the text.
+- Structure.parts: split the SOURCE English in order. Each chunk is `English = short Japanese gloss`.
+- Structure.pattern: English pattern the learner can copy, plus a short Japanese gloss.
+- Vocabulary items: english is the English chunk; gloss is Japanese; collocations are English.
+- Mark the target word or phrase with **bold** inside example sentences.
+- Keep examples short. Prefer workplace English and adult daily life.
+- For stress, use CAPITALS on the strong syllable (for example proCRASTinate).
+- If a field does not apply, write 「該当なし」 with a brief reason.
+- Do not include the original source text in any field. The app already shows it.
+- Return ONLY a JSON object. No markdown fencing.
+
+JSON schema:
+{
+  "translation": {
+    "japanese": "自然な日本語訳",
+    "naturalEnglish": "自然な英語（学習用）",
+    "usage": "どんなときに使う",
+    "formality": "カジュアル / フォーマル"
+  },
+  "pronunciation": { "stress": "強く読む音", "tips": "発音のコツ" },
+  "structure": { "kind": "単語 / フレーズ / 文", "parts": "パーツごと", "pattern": "同じ型で言えるパターン" },
+  "grammar": {
+    "tense": "時制・形",
+    "articles": "冠詞",
+    "prepositions": "前置詞",
+    "other": "この文に出るほかの文法",
+    "why": "なぜこの形なのか"
+  },
+  "vocabulary": [{ "english": "English chunk", "gloss": "日本語", "collocations": "collocations" }],
+  "examples": [{ "sentence": "example with **bold**", "meaning": "意味" }],
+  "notes": { "similar": "似た表現との違い", "mistakes": "やりがちなミス" },
+  "summary": ["要点1", "要点2", "要点3"]
+}
+"""
+            user = """
+Create a structured learning card as JSON for this English text:
+
+\(text)
+"""
+            responseFormat = .init(type: "json_object")
+        } else {
+            let template = Self.localizedExplanationTemplate(for: explanationLanguage)
+            system = """
 You are a patient English teacher for one adult learner.
 
 The learner is a man in his 50s. His English is about CEFR A2. He wants to work at a foreign company. Treat him as a capable adult: clear, respectful, and practical. Never write as if for a child or a junior-high student.
@@ -67,12 +128,13 @@ Output rules:
 Template:
 \(template)
 """
-
-        let user = """
+            user = """
 Create a clear learning card for an English learner. Explain this text in \(explanationLanguage):
 
 \(text)
 """
+            responseFormat = nil
+        }
 
         let body = ChatCompletionsRequest(
             model: model,
@@ -80,7 +142,8 @@ Create a clear learning card for an English learner. Explain this text in \(expl
                 .init(role: "system", content: system),
                 .init(role: "user", content: user)
             ],
-            temperature: 0.2
+            temperature: 0.2,
+            responseFormat: responseFormat
         )
 
         var req = URLRequest(url: url)
@@ -113,6 +176,20 @@ Create a clear learning card for an English learner. Explain this text in \(expl
             completionTokens: decoded.usage?.resolvedCompletionTokens ?? APICost.estimateTokenCount(content),
             cachedPromptTokens: decoded.usage?.cachedPromptTokens ?? 0
         )
+
+        if useStructuredJapanese {
+            let cleaned = content
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let jsonData = cleaned.data(using: .utf8),
+                  let dto = try? JSONDecoder().decode(CardExplanationDTO.self, from: jsonData) else {
+                // Fall back to markdown parse if the model ignored JSON mode.
+                return ExplanationResult(markdown: content, usage: usage)
+            }
+            return ExplanationResult(markdown: dto.makeExplanation().asMarkdown(), explanation: dto.makeExplanation(), usage: usage)
+        }
+
         return ExplanationResult(markdown: content, usage: usage)
     }
 
@@ -143,7 +220,7 @@ Create a clear learning card for an English learner. Explain this text in \(expl
         switch language {
         case "Japanese":
             return """
-            ## 1. 意味
+            ## 1. 日本語訳
             - 自然な日本語訳:
             - 自然な英語（学習用）:
             - どんなときに使う:
@@ -576,9 +653,20 @@ private struct ChatCompletionsRequest: Codable {
         let role: String
         let content: String
     }
+    struct ResponseFormat: Codable {
+        let type: String
+    }
     let model: String
     let messages: [Message]
     let temperature: Double?
+    let responseFormat: ResponseFormat?
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case messages
+        case temperature
+        case responseFormat = "response_format"
+    }
 }
 
 private struct ChatCompletionsResponse: Codable {

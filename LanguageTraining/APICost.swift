@@ -206,5 +206,16 @@ enum APICost {
 
 struct ExplanationResult: Sendable {
     let markdown: String
+    let explanation: CardExplanation?
     let usage: APICost.ChatUsage
+
+    init(markdown: String, explanation: CardExplanation? = nil, usage: APICost.ChatUsage) {
+        self.explanation = explanation ?? CardExplanation.parse(fromMarkdown: markdown)
+        if let structured = self.explanation {
+            self.markdown = structured.asMarkdown()
+        } else {
+            self.markdown = markdown
+        }
+        self.usage = usage
+    }
 }

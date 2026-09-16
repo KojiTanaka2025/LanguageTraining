@@ -12,6 +12,7 @@ The project was originally named EnglishCard and was renamed to LanguageTraining
 - Study mode: Japanese→English+pronunciation or English+pronunciation→Japanese, with spaced-repetition ordering and learning statistics
 - Visual Study dashboard with accuracy / mastery rings, deck composition bar, and a 14-day activity chart
 - Generate structured explanations with meaning, pronunciation, structure, grammar, vocabulary, examples, and notes
+- Store explanations as structured JSON fields (translation, pronunciation, grammar, …), not only one markdown blob; section 1 is titled 日本語訳
 - Write explanations for an adult English learner (about CEFR A2) who wants to work at a foreign company, not in a schoolbook tone
 - Keep English chunks and patterns in the structure and vocabulary sections; gloss them in the explanation language
 - Show the original text once, at the start of the explanation

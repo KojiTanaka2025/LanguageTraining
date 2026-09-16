@@ -4,7 +4,10 @@ struct Card: Identifiable, Hashable, Sendable {
     let id: UUID
     let createdAt: Date
     var sourceText: String
+    /// Legacy / search text. Prefer `explanation` when present.
     var markdown: String
+    /// Structured explanation (preferred).
+    var explanation: CardExplanation?
     /// 音声ファイル名（Application Support内の相対パス）
     var audioFileName: String?
     /// Library filter category. Empty means uncategorized.
@@ -14,14 +17,21 @@ struct Card: Identifiable, Hashable, Sendable {
         id: UUID = UUID(),
         createdAt: Date = Date(),
         sourceText: String,
-        markdown: String,
+        markdown: String = "",
+        explanation: CardExplanation? = nil,
         audioFileName: String? = nil,
         category: String = ""
     ) {
         self.id = id
         self.createdAt = createdAt
         self.sourceText = sourceText
-        self.markdown = markdown
+        let parsed = explanation ?? CardExplanation.parse(fromMarkdown: markdown)
+        self.explanation = parsed
+        if let parsed {
+            self.markdown = parsed.asMarkdown()
+        } else {
+            self.markdown = markdown
+        }
         self.audioFileName = Self.sanitizedAudioFileName(audioFileName)
         self.category = LibraryTag.normalizedName(category)
     }
@@ -58,13 +68,27 @@ struct Card: Identifiable, Hashable, Sendable {
         return trimmed
     }
 
-    /// Explanation for the UI: drop the unhelpful "easy wording" field, then show the source once as the title.
+    /// Explanation for the UI: structured data when available, else legacy markdown cleanup.
     var displayMarkdown: String {
-        Self.displayMarkdown(from: markdown, sourceText: sourceText)
+        if let explanation {
+            return Self.displayMarkdown(from: explanation.asMarkdown(), sourceText: sourceText)
+        }
+        return Self.displayMarkdown(from: markdown, sourceText: sourceText)
     }
 
     static func displayMarkdown(from markdown: String, sourceText: String? = nil) -> String {
         var lines = markdown.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).map(String.init)
+
+        // Rename legacy "意味" section heading to "日本語訳" for display.
+        lines = lines.map { line in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("## "),
+               trimmed.contains("意味"),
+               !trimmed.contains("日本語訳") {
+                return line.replacingOccurrences(of: "意味", with: "日本語訳")
+            }
+            return line
+        }
 
         if let index = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
             let heading = lines[index].trimmingCharacters(in: .whitespaces)

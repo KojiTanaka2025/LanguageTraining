@@ -35,7 +35,7 @@ enum LibraryJSONError: LocalizedError {
 }
 
 enum LibraryJSONCodec {
-    static let version = "1"
+    static let version = "2"
 
     static func encode(_ document: LibraryDocument) throws -> Data {
         let payload = JSONDocument(document: document)
@@ -67,8 +67,7 @@ enum LibraryJSONCodec {
         } catch {
             throw LibraryJSONError.unreadable
         }
-        guard payload.version == version else {
-            // Accept only the current schema for now.
+        guard payload.version == "1" || payload.version == version else {
             throw LibraryJSONError.invalidVersion
         }
         return payload.makeLibraryDocument()
@@ -222,6 +221,7 @@ private struct CardJSON: Codable {
     var createdAt: Date
     var sourceText: String
     var markdown: String
+    var explanation: CardExplanation?
     var audioFileName: String?
     var category: String?
 
@@ -230,6 +230,7 @@ private struct CardJSON: Codable {
         createdAt = card.createdAt
         sourceText = card.sourceText
         markdown = card.markdown
+        explanation = card.explanation
         audioFileName = card.audioFileName
         let category = LibraryTag.normalizedName(card.category)
         self.category = category.isEmpty ? nil : category
@@ -242,6 +243,7 @@ private struct CardJSON: Codable {
             createdAt: createdAt,
             sourceText: sourceText,
             markdown: markdown,
+            explanation: explanation,
             audioFileName: audioFileName,
             category: category ?? ""
         )

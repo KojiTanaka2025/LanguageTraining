@@ -12,6 +12,9 @@ struct CardStudyContent: Hashable, Sendable {
     static func make(from card: Card) -> CardStudyContent? {
         let english = card.sourceText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !english.isEmpty else { return nil }
+        if let japanese = card.explanation?.japaneseTranslation, !japanese.isEmpty {
+            return CardStudyContent(english: english, japanese: japanese)
+        }
         guard let japanese = extractJapanese(from: card.markdown), !japanese.isEmpty else {
             return nil
         }

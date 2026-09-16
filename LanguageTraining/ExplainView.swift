@@ -7,6 +7,7 @@ struct ExplainView: View {
 
     @State private var clipboardText: String = ""
     @State private var markdown: String = ""
+    @State private var explanation: CardExplanation?
 
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -341,12 +342,20 @@ struct ExplainView: View {
             try? audioPlayer.play(fileURL: audio, text: text, deleteAfterPlay: false)
         }
         
-        if let explanation = explanation {
+        if let explanationResult = explanation {
             let chargedForNewAudio = needsNewAudio && audio != nil
-            let chatUSD = APICost.chatUSD(model: settings.openAIModel, usage: explanation.usage)
+            let chatUSD = APICost.chatUSD(model: settings.openAIModel, usage: explanationResult.usage)
             let audioUSD = chargedForNewAudio ? APICost.ttsUSD(spokenText: text) : 0
+            let footer = APICost.footer(
+                usd: chatUSD + audioUSD,
+                explanationLanguage: settings.explanationLanguage,
+                includedAudio: chargedForNewAudio
+            )
+            var structured = explanationResult.explanation
+            structured?.costFooter = footer
+            self.explanation = structured
             markdown = APICost.appendingFooter(
-                to: Card.displayMarkdown(from: explanation.markdown),
+                to: Card.displayMarkdown(from: explanationResult.markdown),
                 usd: chatUSD + audioUSD,
                 explanationLanguage: settings.explanationLanguage,
                 includedAudio: chargedForNewAudio
@@ -461,6 +470,7 @@ struct ExplainView: View {
                     id: cardID,
                     sourceText: source,
                     markdown: md,
+                    explanation: explanation,
                     audioFileName: audioFileName,
                     category: category
                 )
@@ -471,6 +481,7 @@ struct ExplainView: View {
                 try await store.appendCard(
                     sourceText: source,
                     markdown: md,
+                    explanation: explanation,
                     audioFileName: nil,
                     category: category
                 )
