@@ -18,6 +18,8 @@ struct SettingsView: View {
     @State private var isExportingFile = false
     @State private var isPickingFolder = false
     @State private var exportDocument = ExportedZipDocument(data: Data())
+    @State private var newCategoryName = ""
+    @State private var categoryErrorMessage: String?
 
     private let explanationLanguages = [
         "English",
@@ -97,6 +99,49 @@ struct SettingsView: View {
                     }
                 }
                 #endif
+            }
+
+            Section("Categories") {
+                Text("Built-in and custom categories for Library filtering. Choose a category when saving a card, or change it from the Library context menu.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(CardCategory.presets, id: \.self) { name in
+                    LabeledContent(name) {
+                        Text("Built-in")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                ForEach(settings.customCategories, id: \.self) { name in
+                    HStack {
+                        Text(name)
+                        Spacer()
+                        Button(role: .destructive) {
+                            removeCategory(name)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove this custom category from Settings. Cards keep the label until you change them.")
+                    }
+                }
+
+                HStack {
+                    TextField("New category", text: $newCategoryName)
+                        .onSubmit(addCategory)
+                    Button("Add") {
+                        addCategory()
+                    }
+                    .disabled(newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                if let categoryErrorMessage {
+                    Text(categoryErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             }
 
             Section("Library") {
@@ -212,6 +257,31 @@ struct SettingsView: View {
             successMessage = nil
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func addCategory() {
+        let trimmed = CardCategory.normalized(newCategoryName)
+        guard !trimmed.isEmpty else {
+            categoryErrorMessage = "Enter a category name."
+            return
+        }
+        if CardCategory.presets.contains(trimmed) || settings.customCategories.contains(trimmed) {
+            categoryErrorMessage = "“\(trimmed)” already exists."
+            return
+        }
+        guard settings.addCustomCategory(trimmed) else {
+            categoryErrorMessage = "Could not add that category."
+            return
+        }
+        newCategoryName = ""
+        categoryErrorMessage = nil
+        try? settings.save()
+    }
+
+    private func removeCategory(_ name: String) {
+        settings.removeCustomCategory(name)
+        categoryErrorMessage = nil
+        try? settings.save()
     }
 
     private func exportData() {

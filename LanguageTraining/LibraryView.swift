@@ -7,6 +7,7 @@ struct LibraryView: View {
 
     @State private var query: String = ""
     @State private var selected: Card.ID?
+    @State private var categoryFilter: String = CardCategory.allFilterID
     
     @State private var errorMessage: String?
     @State private var cardPendingDeletion: Card?
@@ -32,11 +33,13 @@ struct LibraryView: View {
                         message: loadError,
                         showsRetry: true
                     )
-                } else if filtered.isEmpty && !query.isEmpty {
+                } else if filtered.isEmpty && (!query.isEmpty || categoryFilter != CardCategory.allFilterID) {
                     emptyState(
                         icon: "magnifyingglass",
                         title: "No results",
-                        message: "Try a different keyword."
+                        message: categoryFilter == CardCategory.allFilterID
+                            ? "Try a different keyword."
+                            : "No cards in “\(CardCategory.displayName(categoryFilter))”."
                     )
                 } else if store.cards.isEmpty {
                     emptyState(
@@ -51,6 +54,17 @@ struct LibraryView: View {
             .navigationTitle("Library")
             .searchable(text: $query, prompt: "Search cards")
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("Category", selection: $categoryFilter) {
+                        Text(CardCategory.allFilterLabel).tag(CardCategory.allFilterID)
+                        ForEach(filterCategoryChoices, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                        Text(CardCategory.uncategorizedLabel).tag(CardCategory.uncategorizedID)
+                    }
+                    .pickerStyle(.menu)
+                    .help("Show all cards or only one category")
+                }
                 ToolbarItem(placement: .status) {
                     Text(cardCountLabel)
                         .foregroundStyle(.secondary)
@@ -62,6 +76,11 @@ struct LibraryView: View {
                 #endif
             }
             .onChange(of: filtered.map(\.id)) { _, _ in
+                #if os(macOS)
+                selectFirstAvailableCard()
+                #endif
+            }
+            .onChange(of: categoryFilter) { _, _ in
                 #if os(macOS)
                 selectFirstAvailableCard()
                 #endif
@@ -136,6 +155,7 @@ struct LibraryView: View {
                     Button("Copy Text") {
                         copySourceText(card.sourceText)
                     }
+                    categoryMenu(for: card)
                     Button("Delete", role: .destructive) {
                         cardPendingDeletion = card
                     }
@@ -172,10 +192,46 @@ struct LibraryView: View {
 
     private var cardCountLabel: String {
         let total = store.cards.count
-        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        let shown = filtered.count
+        if categoryFilter == CardCategory.allFilterID,
+           query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return total == 1 ? "1 card" : "\(total) cards"
         }
-        return "\(filtered.count) of \(total)"
+        return "\(shown) of \(total)"
+    }
+
+    private var filterCategoryChoices: [String] {
+        settings.categoryChoices(usedOnCards: store.cards.map(\.category))
+    }
+
+    private var assignCategoryChoices: [String] {
+        filterCategoryChoices
+    }
+
+    @ViewBuilder
+    private func categoryMenu(for card: Card) -> some View {
+        Menu("Category") {
+            ForEach(assignCategoryChoices, id: \.self) { name in
+                Button {
+                    setCategory(name, for: card)
+                } label: {
+                    if card.category == name {
+                        Label(name, systemImage: "checkmark")
+                    } else {
+                        Text(name)
+                    }
+                }
+            }
+            Button {
+                setCategory(CardCategory.uncategorizedID, for: card)
+            } label: {
+                if card.category.isEmpty {
+                    Label(CardCategory.uncategorizedLabel, systemImage: "checkmark")
+                } else {
+                    Text(CardCategory.uncategorizedLabel)
+                }
+            }
+        }
     }
 
     private var cardList: some View {
@@ -187,6 +243,7 @@ struct LibraryView: View {
                         Button("Copy Text") {
                             copySourceText(card.sourceText)
                         }
+                        categoryMenu(for: card)
                         Button("Delete", role: .destructive) {
                             cardPendingDeletion = card
                         }
@@ -226,10 +283,26 @@ struct LibraryView: View {
     }
 
     private var filtered: [Card] {
+        var cards = store.cards
+        if categoryFilter != CardCategory.allFilterID {
+            cards = cards.filter { $0.category == categoryFilter }
+        }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return store.cards }
-        return store.cards.filter { c in
-            c.sourceText.localizedCaseInsensitiveContains(q) || c.markdown.localizedCaseInsensitiveContains(q)
+        guard !q.isEmpty else { return cards }
+        return cards.filter { c in
+            c.sourceText.localizedCaseInsensitiveContains(q)
+                || c.markdown.localizedCaseInsensitiveContains(q)
+                || CardCategory.displayName(c.category).localizedCaseInsensitiveContains(q)
+        }
+    }
+
+    private func setCategory(_ category: String, for card: Card) {
+        var updated = card
+        updated.category = CardCategory.normalized(category)
+        do {
+            try store.updateCard(updated)
+        } catch {
+            errorMessage = "Failed to update the category: \(error.localizedDescription)"
         }
     }
     
@@ -449,9 +522,17 @@ private struct CardRow: View {
                         .help("Audio saved")
                 }
             }
-            Text(card.createdAt, format: .relative(presentation: .named))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 6) {
+                Text(CardCategory.displayName(card.category))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text("·")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Text(card.createdAt, format: .relative(presentation: .named))
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.vertical, 2)
     }

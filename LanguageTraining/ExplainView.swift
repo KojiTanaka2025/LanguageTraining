@@ -20,6 +20,7 @@ struct ExplainView: View {
     @State private var lastGeneratedAudioURL: URL?
     @State private var lastGeneratedAudioText: String?
     @State private var saveAudioWithCard = true // 音声をカードに保存するか
+    @State private var selectedCategory: String = ""
     
     // 初回起動フラグ
     @State private var hasLoadedOnce = false
@@ -60,6 +61,12 @@ struct ExplainView: View {
             if !hasLoadedOnce {
                 hasLoadedOnce = true
                 loadClipboardOnly()
+                let last = settings.lastSaveCategory
+                if last.isEmpty || saveCategoryChoices.contains(last) {
+                    selectedCategory = last
+                } else {
+                    selectedCategory = CardCategory.presets[0]
+                }
             }
         }
         .onChange(of: didSave) { _, saved in
@@ -174,6 +181,15 @@ struct ExplainView: View {
                 #endif
                 .help("Save pronunciation audio with this card")
 
+                Picker("Category", selection: $selectedCategory) {
+                    ForEach(saveCategoryChoices, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                    Text(CardCategory.uncategorizedLabel).tag(CardCategory.uncategorizedID)
+                }
+                .frame(maxWidth: 180)
+                .help("Library category for this card")
+
                 Button("Save to Library") {
                     Task { await saveCard() }
                 }
@@ -238,6 +254,10 @@ struct ExplainView: View {
         )
     }
     
+    private var saveCategoryChoices: [String] {
+        settings.categoryChoices(usedOnCards: store.cards.map(\.category))
+    }
+
     // MARK: - Methods
     
     /// クリップボードのみ読み込む（API呼び出しなし）
@@ -368,6 +388,7 @@ struct ExplainView: View {
         errorMessage = nil
         let source = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
         let md = Card.displayMarkdown(from: markdown)
+        let category = CardCategory.normalized(selectedCategory)
         guard !source.isEmpty, !md.isEmpty else { return }
         
         do {
@@ -404,15 +425,22 @@ struct ExplainView: View {
                     id: cardID,
                     sourceText: source,
                     markdown: md,
-                    audioFileName: audioFileName
+                    audioFileName: audioFileName,
+                    category: category
                 )
                 try store.appendCard(card)
             } else {
                 // 音声なしで保存（念のため一時ファイルがあればクリーンアップ）
                 cleanupTempAudio()
-                try await store.appendCard(sourceText: source, markdown: md, audioFileName: nil)
+                try await store.appendCard(
+                    sourceText: source,
+                    markdown: md,
+                    audioFileName: nil,
+                    category: category
+                )
             }
-            
+
+            settings.lastSaveCategory = category
             didSave = true
         } catch {
             errorMessage = error.localizedDescription

@@ -42,8 +42,8 @@ final class CardStore: ObservableObject {
         }
     }
 
-    func appendCard(sourceText: String, markdown: String, audioFileName: String? = nil) async throws {
-        let card = Card(sourceText: sourceText, markdown: markdown, audioFileName: audioFileName)
+    func appendCard(sourceText: String, markdown: String, audioFileName: String? = nil, category: String = "") async throws {
+        let card = Card(sourceText: sourceText, markdown: markdown, audioFileName: audioFileName, category: category)
         try appendCard(card)
     }
 

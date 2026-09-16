@@ -34,6 +34,10 @@ enum CardXMLCodec {
             if let audioFileName = Card.sanitizedAudioFileName(card.audioFileName) {
                 xml += " audioFileName=\"\(escapeAttribute(audioFileName))\""
             }
+            let category = CardCategory.normalized(card.category)
+            if !category.isEmpty {
+                xml += " category=\"\(escapeAttribute(category))\""
+            }
             xml += ">\n"
             xml += "      <sourceText>\(escapeText(card.sourceText))</sourceText>\n"
             xml += "      <markdown>\(escapeText(card.markdown))</markdown>\n"
@@ -121,6 +125,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentID: UUID?
     private var currentCreatedAt: Date?
     private var currentAudioFileName: String?
+    private var currentCategory = ""
     private var currentSourceText = ""
     private var currentMarkdown = ""
     private var currentElement: String?
@@ -140,6 +145,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
             currentID = UUID(uuidString: attributeDict["id"] ?? "")
             currentCreatedAt = CardXMLCodec.parseDate(attributeDict["createdAt"] ?? "")
             currentAudioFileName = attributeDict["audioFileName"]
+            currentCategory = CardCategory.normalized(attributeDict["category"])
             currentSourceText = ""
             currentMarkdown = ""
         }
@@ -169,12 +175,14 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
                     createdAt: createdAt,
                     sourceText: currentSourceText,
                     markdown: currentMarkdown,
-                    audioFileName: Card.sanitizedAudioFileName(currentAudioFileName)
+                    audioFileName: Card.sanitizedAudioFileName(currentAudioFileName),
+                    category: currentCategory
                 ))
             }
             currentID = nil
             currentCreatedAt = nil
             currentAudioFileName = nil
+            currentCategory = ""
         }
         currentElement = nil
         textBuffer = ""

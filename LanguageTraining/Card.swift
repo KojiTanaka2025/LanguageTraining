@@ -7,19 +7,23 @@ struct Card: Identifiable, Hashable, Sendable {
     var markdown: String
     /// 音声ファイル名（Application Support内の相対パス）
     var audioFileName: String?
+    /// Library filter category. Empty means uncategorized.
+    var category: String
 
     init(
         id: UUID = UUID(),
         createdAt: Date = Date(),
         sourceText: String,
         markdown: String,
-        audioFileName: String? = nil
+        audioFileName: String? = nil,
+        category: String = ""
     ) {
         self.id = id
         self.createdAt = createdAt
         self.sourceText = sourceText
         self.markdown = markdown
         self.audioFileName = Self.sanitizedAudioFileName(audioFileName)
+        self.category = CardCategory.normalized(category)
     }
     
     /// 音声ファイルの絶対パスを取得

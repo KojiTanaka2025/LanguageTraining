@@ -126,17 +126,22 @@ Generated cards can include:
 
 Review the generated explanation, then click Save to Library or press `Command + S` on Mac.
 
+Choose a category before saving (built-in options include 仕事用 and 日常会話, plus any you add in Settings, or 未分類). The last choice is remembered for the next save.
+
 Turn off Save audio if you do not want to store pronunciation with the card.
 
-Saved cards include the original text, explanation, creation date, and audio when available. If iCloud Drive sharing is set up, the new card appears on the other device after it uploads.
+Saved cards include the original text, explanation, category, creation date, and audio when available. If iCloud Drive sharing is set up, the new card appears on the other device after it uploads.
 
 ## Review Saved Cards
 
 1. Open the Library tab.
-2. Use search to filter cards.
-3. Open a card to view the full explanation. On Mac, select it in the list. On iPhone, tap the card; the explanation opens on the next screen. The detail view shows the explanation only; the original text appears as the explanation title.
-4. Play saved audio, or generate audio if none is saved. Newly generated library audio is stored on the card.
-5. Copy the source text or delete a card from the context menu. On Mac you can also press Delete after selecting a card. On iPhone you can swipe to delete.
+2. Use the category menu to show all cards, one category, or uncategorized cards.
+3. Use search to filter further by text or category name.
+4. Open a card to view the full explanation. On Mac, select it in the list. On iPhone, tap the card; the explanation opens on the next screen. The detail view shows the explanation only; the original text appears as the explanation title.
+5. Play saved audio, or generate audio if none is saved. Newly generated library audio is stored on the card.
+6. Copy the source text, change the category, or delete a card from the context menu. On Mac you can also press Delete after selecting a card. On iPhone you can swipe to delete.
+
+Add or remove custom categories in Settings. Built-in categories (仕事用, 日常会話) stay available. Removing a custom category from Settings does not rewrite existing cards; change those cards’ categories from the Library context menu if needed.
 
 ## Keyboard Shortcuts
 
