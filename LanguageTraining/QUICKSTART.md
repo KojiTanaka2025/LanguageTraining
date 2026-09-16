@@ -61,7 +61,8 @@ The Files picker may show On My iPhone, Google Drive, or other locations without
 4. Keep the default model unless you need a different one.
 5. Keep the Base URL as `https://api.openai.com` unless you use a trusted OpenAI-compatible provider.
 6. Optionally set Explanation Language. Japanese is the verified setting for Japanese learners of English. Other languages are available but have not been checked in use.
-7. Click Save.
+7. On Mac, use **Open Library Folder in Finder** to reveal the folder that stores `cards.json` and audio.
+8. Click Save.
 
 ### iPhone
 
