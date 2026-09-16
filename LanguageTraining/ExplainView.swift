@@ -20,7 +20,7 @@ struct ExplainView: View {
     @State private var lastGeneratedAudioURL: URL?
     @State private var lastGeneratedAudioText: String?
     @State private var saveAudioWithCard = true // 音声をカードに保存するか
-    @State private var selectedCategory: String = ""
+    @State private var selectedCategory: String = LibraryTag.builtInDefaults[0].name
     @State private var isPresentingNewTag = false
     
     // 初回起動フラグ
@@ -195,41 +195,40 @@ struct ExplainView: View {
                 #endif
                 .help("Save pronunciation audio with this card")
 
-                Menu {
-                    ForEach(store.tags) { tag in
-                        Button {
-                            selectedCategory = tag.name
-                        } label: {
-                            tagMenuLabel(tag.name, colorHex: tag.colorHex, selected: selectedCategory == tag.name)
+                HStack(spacing: 6) {
+                    Text("Tag")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    Picker("Tag", selection: $selectedCategory) {
+                        ForEach(store.tags) { tag in
+                            HStack(spacing: 6) {
+                                TagSwatch(colorHex: tag.colorHex)
+                                Text(tag.name)
+                            }
+                            .tag(tag.name)
                         }
+                        HStack(spacing: 6) {
+                            TagSwatch(colorHex: LibraryTag.defaultColorHex)
+                            Text(LibraryTag.uncategorizedLabel)
+                        }
+                        .tag(LibraryTag.uncategorizedID)
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(minWidth: 110, maxWidth: 160)
+                    .help("Tag saved with this card")
+
                     Button {
-                        selectedCategory = LibraryTag.uncategorizedID
-                    } label: {
-                        tagMenuLabel(
-                            LibraryTag.uncategorizedLabel,
-                            colorHex: LibraryTag.defaultColorHex,
-                            selected: selectedCategory.isEmpty
-                        )
-                    }
-                    Divider()
-                    Button("New Tag…") {
                         isPresentingNewTag = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
-                } label: {
-                    HStack(spacing: 6) {
-                        TagSwatch(
-                            colorHex: selectedCategory.isEmpty
-                                ? LibraryTag.defaultColorHex
-                                : store.colorHex(forCategory: selectedCategory)
-                        )
-                        Text(LibraryTag.displayName(selectedCategory))
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                    .help("Add a new tag")
+                    #if os(macOS)
+                    .buttonStyle(.bordered)
+                    #endif
                 }
-                .help("Tag saved with this card")
 
                 Button("Save to Library") {
                     Task { await saveCard() }
@@ -269,18 +268,6 @@ struct ExplainView: View {
                 FormattedMarkdownView(markdown: Card.displayMarkdown(from: markdown, sourceText: sourceText))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.appTextBackground)
-            }
-        }
-    }
-
-    private func tagMenuLabel(_ name: String, colorHex: String, selected: Bool) -> some View {
-        Label {
-            Text(name)
-        } icon: {
-            if selected {
-                Image(systemName: "checkmark")
-            } else {
-                TagSwatch(colorHex: colorHex)
             }
         }
     }
