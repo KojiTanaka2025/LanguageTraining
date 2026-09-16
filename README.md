@@ -9,6 +9,7 @@ The project was originally named EnglishCard and was renamed to LanguageTraining
 - Create learning cards from pasted or clipboard text
 - Tag cards with colored labels such as 仕事用 and 日常会話 (stored in the library data); add tags quickly from Explain, Library, or Settings
 - Filter the Library by tag (all, one tag, or uncategorized); change a card’s tag from the row dropdown or the context menu
+- Study mode: Japanese→English+pronunciation or English+pronunciation→Japanese, with spaced-repetition ordering and learning statistics
 - Generate structured explanations with meaning, pronunciation, structure, grammar, vocabulary, examples, and notes
 - Write explanations for an adult English learner (about CEFR A2) who wants to work at a foreign company, not in a schoolbook tone
 - Keep English chunks and patterns in the structure and vocabulary sections; gloss them in the explanation language
@@ -131,6 +132,9 @@ LanguageTraining/
 │   ├── LayoutPersistence.swift
 │   ├── Card.swift
 │   ├── LibraryTag.swift
+│   ├── StudyProgress.swift
+│   ├── CardStudyContent.swift
+│   ├── StudyView.swift
 │   ├── CardStore.swift
 │   ├── CardXMLCodec.swift
 │   ├── OpenAIClient.swift

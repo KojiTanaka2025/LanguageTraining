@@ -20,13 +20,21 @@ enum CardXMLError: LocalizedError {
 struct LibraryDocument: Sendable {
     var tags: [LibraryTag]
     var cards: [Card]
+    var studyProgress: [StudyProgress]
 
-    static func seeded(cards: [Card], tags: [LibraryTag] = [], extraNames: [String] = []) -> LibraryDocument {
+    static func seeded(
+        cards: [Card],
+        tags: [LibraryTag] = [],
+        studyProgress: [StudyProgress] = [],
+        extraNames: [String] = []
+    ) -> LibraryDocument {
         let catalog = tags.isEmpty ? LibraryTag.builtInDefaults : tags
         let used = cards.map(\.category) + extraNames
+        let knownIDs = Set(cards.map(\.id))
         return LibraryDocument(
             tags: LibraryTag.mergedCatalog(existing: catalog, usedNames: used),
-            cards: cards
+            cards: cards,
+            studyProgress: studyProgress.filter { knownIDs.contains($0.cardID) }
         )
     }
 }
@@ -35,8 +43,8 @@ enum CardXMLCodec {
     static let rootName = "englishCard"
     static let version = "1"
 
-    static func encode(tags: [LibraryTag], cards: [Card]) throws -> Data {
-        try encode(LibraryDocument(tags: tags, cards: cards))
+    static func encode(tags: [LibraryTag], cards: [Card], studyProgress: [StudyProgress] = []) throws -> Data {
+        try encode(LibraryDocument(tags: tags, cards: cards, studyProgress: studyProgress))
     }
 
     static func encode(_ document: LibraryDocument) throws -> Data {
@@ -76,6 +84,27 @@ enum CardXMLCodec {
 
         xml += """
           </cards>
+          <study>
+
+        """
+
+        for item in document.studyProgress {
+            xml += "    <progress cardId=\"\(escapeAttribute(item.cardID.uuidString))\""
+            xml += " easeFactor=\"\(item.easeFactor)\""
+            xml += " intervalDays=\"\(item.intervalDays)\""
+            xml += " repetitions=\"\(item.repetitions)\""
+            xml += " nextReviewAt=\"\(escapeAttribute(iso8601Fractional.string(from: item.nextReviewAt)))\""
+            if let last = item.lastReviewedAt {
+                xml += " lastReviewedAt=\"\(escapeAttribute(iso8601Fractional.string(from: last)))\""
+            }
+            xml += " reviewCount=\"\(item.reviewCount)\""
+            xml += " correctCount=\"\(item.correctCount)\""
+            xml += " incorrectCount=\"\(item.incorrectCount)\""
+            xml += "/>\n"
+        }
+
+        xml += """
+          </study>
         </EnglishCardData>
         """
 
@@ -110,7 +139,11 @@ enum CardXMLCodec {
         }
 
         let cards = delegate.cards.sorted { $0.createdAt > $1.createdAt }
-        return LibraryDocument.seeded(cards: cards, tags: delegate.tags)
+        return LibraryDocument.seeded(
+            cards: cards,
+            tags: delegate.tags,
+            studyProgress: delegate.studyProgress
+        )
     }
 
     /// Convenience for callers that only need the card list.
@@ -154,6 +187,7 @@ enum CardXMLCodec {
 private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
     var tags: [LibraryTag] = []
     var cards: [Card] = []
+    var studyProgress: [StudyProgress] = []
     var sawRoot = false
     var sawCards = false
     var cardNodeCount = 0
@@ -183,6 +217,31 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
             let id = UUID(uuidString: attributeDict["id"] ?? "") ?? UUID()
             let color = LibraryTag.normalizedColor(attributeDict["color"])
             tags.append(LibraryTag(id: id, name: name, colorHex: color))
+            return
+        }
+        if elementName == "progress" {
+            guard let id = UUID(uuidString: attributeDict["cardId"] ?? "") else { return }
+            let ease = Double(attributeDict["easeFactor"] ?? "") ?? StudyProgress.defaultEase
+            let interval = Double(attributeDict["intervalDays"] ?? "") ?? 0
+            let repetitions = Int(attributeDict["repetitions"] ?? "") ?? 0
+            let nextReview = CardXMLCodec.parseDate(attributeDict["nextReviewAt"] ?? "") ?? Date()
+            let lastReviewed = CardXMLCodec.parseDate(attributeDict["lastReviewedAt"] ?? "")
+            let reviewCount = Int(attributeDict["reviewCount"] ?? "") ?? 0
+            let correctCount = Int(attributeDict["correctCount"] ?? "") ?? 0
+            let incorrectCount = Int(attributeDict["incorrectCount"] ?? "") ?? 0
+            studyProgress.append(
+                StudyProgress(
+                    cardID: id,
+                    easeFactor: max(StudyProgress.minimumEase, ease),
+                    intervalDays: max(0, interval),
+                    repetitions: max(0, repetitions),
+                    nextReviewAt: nextReview,
+                    lastReviewedAt: lastReviewed,
+                    reviewCount: max(0, reviewCount),
+                    correctCount: max(0, correctCount),
+                    incorrectCount: max(0, incorrectCount)
+                )
+            )
             return
         }
         if elementName == "card" {

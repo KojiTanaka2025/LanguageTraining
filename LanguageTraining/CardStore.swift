@@ -17,6 +17,7 @@ enum CardStoreError: LocalizedError {
 final class CardStore: ObservableObject {
     @Published private(set) var cards: [Card] = []
     @Published private(set) var tags: [LibraryTag] = LibraryTag.builtInDefaults
+    @Published private(set) var studyProgress: [UUID: StudyProgress] = [:]
     @Published var lastLoadedAt: Date? = nil
     @Published private(set) var loadErrorMessage: String? = nil
     @Published private(set) var isUsingiCloud = false
@@ -110,6 +111,29 @@ final class CardStore: ObservableObject {
         }
     }
 
+    func progress(for cardID: UUID) -> StudyProgress? {
+        studyProgress[cardID]
+    }
+
+    func recordStudy(cardID: UUID, grade: StudyGrade) throws {
+        try mutatingWithRollback {
+            let current = studyProgress[cardID] ?? StudyProgress.fresh(cardID: cardID)
+            studyProgress[cardID] = StudyScheduler.apply(grade: grade, to: current)
+        }
+    }
+
+    var studyStats: StudyStatsSummary {
+        StudyStatsSummary.build(cards: cards, progress: studyProgress)
+    }
+
+    func studyQueue(limit: Int = 40, tagFilter: String? = nil) -> [UUID] {
+        var pool = cards
+        if let tagFilter, tagFilter != LibraryTag.allFilterID {
+            pool = pool.filter { $0.category == tagFilter }
+        }
+        return StudyScheduler.buildQueue(cards: pool, progress: studyProgress, limit: limit)
+    }
+
     /// 音声ファイルを保存して、そのファイル名を返す
     func saveAudioFile(from tempURL: URL, for cardID: UUID) throws -> String {
         try ensureCanPersist()
@@ -133,6 +157,9 @@ final class CardStore: ObservableObject {
         let removed = offsets.compactMap { cards.indices.contains($0) ? cards[$0] : nil }
         try mutatingWithRollback {
             cards.remove(atOffsets: offsets)
+            for card in removed {
+                studyProgress[card.id] = nil
+            }
         }
         for card in removed {
             if let audioURL = card.audioFileURL() {
@@ -144,6 +171,7 @@ final class CardStore: ObservableObject {
     func deleteCard(_ card: Card) throws {
         try mutatingWithRollback {
             cards.removeAll { $0.id == card.id }
+            studyProgress[card.id] = nil
         }
         if let audioURL = card.audioFileURL() {
             try? CoordinatedFile.removeItem(at: audioURL)
@@ -154,7 +182,11 @@ final class CardStore: ObservableObject {
         try ensureCanPersist()
         let url = try dataFileURL()
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let data = try CardXMLCodec.encode(tags: tags, cards: cards)
+        let data = try CardXMLCodec.encode(
+            tags: tags,
+            cards: cards,
+            studyProgress: Array(studyProgress.values)
+        )
         lastPersistedData = data
         try CoordinatedFile.writeData(data, to: url)
     }
@@ -184,6 +216,7 @@ final class CardStore: ObservableObject {
     private func apply(_ snapshot: LibrarySnapshot) {
         cards = snapshot.cards
         tags = snapshot.tags
+        studyProgress = Dictionary(uniqueKeysWithValues: snapshot.studyProgress.map { ($0.cardID, $0) })
         lastPersistedData = snapshot.persistedData
         lastLoadedAt = Date()
         loadErrorMessage = nil
@@ -225,12 +258,14 @@ final class CardStore: ObservableObject {
         try ensureCanPersist()
         let previousCards = cards
         let previousTags = tags
+        let previousStudy = studyProgress
         do {
             try mutate()
             try persist()
         } catch {
             cards = previousCards
             tags = previousTags
+            studyProgress = previousStudy
             throw error
         }
     }
@@ -275,6 +310,7 @@ final class CardStore: ObservableObject {
             }
             cards = snapshot.cards
             tags = snapshot.tags
+            studyProgress = Dictionary(uniqueKeysWithValues: snapshot.studyProgress.map { ($0.cardID, $0) })
             lastPersistedData = snapshot.persistedData
             lastLoadedAt = Date()
             isUsingiCloud = snapshot.isUsingiCloud
@@ -287,6 +323,7 @@ final class CardStore: ObservableObject {
 private struct LibrarySnapshot: Sendable {
     var tags: [LibraryTag]
     var cards: [Card]
+    var studyProgress: [StudyProgress]
     var persistedData: Data?
     var isUsingiCloud: Bool
 
@@ -299,6 +336,7 @@ private struct LibrarySnapshot: Sendable {
             return LibrarySnapshot(
                 tags: document.tags,
                 cards: document.cards,
+                studyProgress: document.studyProgress,
                 persistedData: data,
                 isUsingiCloud: AppStorage.isUsingiCloud
             )
@@ -306,6 +344,7 @@ private struct LibrarySnapshot: Sendable {
         return LibrarySnapshot(
             tags: LibraryTag.builtInDefaults,
             cards: [],
+            studyProgress: [],
             persistedData: nil,
             isUsingiCloud: AppStorage.isUsingiCloud
         )

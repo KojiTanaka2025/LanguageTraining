@@ -311,7 +311,7 @@ struct DataManager {
         This archive contains the following data:
         
         📁 LanguageTraining/
-        ├── cards.xml          # tag catalog + all learning card data
+        ├── cards.xml          # tags, cards, and study progress
         └── audio/             # audio files in MP3 format
         
         
