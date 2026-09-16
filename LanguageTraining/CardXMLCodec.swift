@@ -17,22 +17,56 @@ enum CardXMLError: LocalizedError {
     }
 }
 
+struct LibraryDocument: Sendable {
+    var tags: [LibraryTag]
+    var cards: [Card]
+
+    static func seeded(cards: [Card], tags: [LibraryTag] = [], extraNames: [String] = []) -> LibraryDocument {
+        let catalog = tags.isEmpty ? LibraryTag.builtInDefaults : tags
+        let used = cards.map(\.category) + extraNames
+        return LibraryDocument(
+            tags: LibraryTag.mergedCatalog(existing: catalog, usedNames: used),
+            cards: cards
+        )
+    }
+}
+
 enum CardXMLCodec {
     static let rootName = "englishCard"
     static let version = "1"
 
-    static func encode(cards: [Card]) throws -> Data {
+    static func encode(tags: [LibraryTag], cards: [Card]) throws -> Data {
+        try encode(LibraryDocument(tags: tags, cards: cards))
+    }
+
+    static func encode(_ document: LibraryDocument) throws -> Data {
         var xml = """
         <?xml version="1.0" encoding="utf-8"?>
         <EnglishCardData version="\(version)">
+          <tags>
+
+        """
+
+        for tag in document.tags {
+            let name = LibraryTag.normalizedName(tag.name)
+            guard !name.isEmpty else { continue }
+            xml += "    <tag id=\"\(escapeAttribute(tag.id.uuidString))\" name=\"\(escapeAttribute(name))\" color=\"\(escapeAttribute(LibraryTag.normalizedColor(tag.colorHex)))\"/>\n"
+        }
+
+        xml += """
+          </tags>
           <cards>
 
         """
 
-        for card in cards {
+        for card in document.cards {
             xml += "    <card id=\"\(escapeAttribute(card.id.uuidString))\" createdAt=\"\(iso8601Fractional.string(from: card.createdAt))\""
             if let audioFileName = Card.sanitizedAudioFileName(card.audioFileName) {
                 xml += " audioFileName=\"\(escapeAttribute(audioFileName))\""
+            }
+            let category = LibraryTag.normalizedName(card.category)
+            if !category.isEmpty {
+                xml += " category=\"\(escapeAttribute(category))\""
             }
             xml += ">\n"
             xml += "      <sourceText>\(escapeText(card.sourceText))</sourceText>\n"
@@ -51,7 +85,7 @@ enum CardXMLCodec {
         return data
     }
 
-    static func decode(data: Data) throws -> [Card] {
+    static func decode(data: Data) throws -> LibraryDocument {
         let parser = XMLParser(data: data)
         let delegate = LibraryXMLParserDelegate()
         parser.delegate = delegate
@@ -75,7 +109,13 @@ enum CardXMLCodec {
             throw CardXMLError.unreadableCards
         }
 
-        return delegate.cards.sorted { $0.createdAt > $1.createdAt }
+        let cards = delegate.cards.sorted { $0.createdAt > $1.createdAt }
+        return LibraryDocument.seeded(cards: cards, tags: delegate.tags)
+    }
+
+    /// Convenience for callers that only need the card list.
+    static func decodeCards(data: Data) throws -> [Card] {
+        try decode(data: data).cards
     }
 
     fileprivate static func parseDate(_ string: String) -> Date? {
@@ -112,6 +152,7 @@ enum CardXMLCodec {
 }
 
 private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
+    var tags: [LibraryTag] = []
     var cards: [Card] = []
     var sawRoot = false
     var sawCards = false
@@ -121,6 +162,7 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
     private var currentID: UUID?
     private var currentCreatedAt: Date?
     private var currentAudioFileName: String?
+    private var currentCategory = ""
     private var currentSourceText = ""
     private var currentMarkdown = ""
     private var currentElement: String?
@@ -135,11 +177,20 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
             sawCards = true
             return
         }
+        if elementName == "tag" {
+            let name = LibraryTag.normalizedName(attributeDict["name"])
+            guard !name.isEmpty else { return }
+            let id = UUID(uuidString: attributeDict["id"] ?? "") ?? UUID()
+            let color = LibraryTag.normalizedColor(attributeDict["color"])
+            tags.append(LibraryTag(id: id, name: name, colorHex: color))
+            return
+        }
         if elementName == "card" {
             cardNodeCount += 1
             currentID = UUID(uuidString: attributeDict["id"] ?? "")
             currentCreatedAt = CardXMLCodec.parseDate(attributeDict["createdAt"] ?? "")
             currentAudioFileName = attributeDict["audioFileName"]
+            currentCategory = LibraryTag.normalizedName(attributeDict["category"])
             currentSourceText = ""
             currentMarkdown = ""
         }
@@ -169,12 +220,14 @@ private final class LibraryXMLParserDelegate: NSObject, XMLParserDelegate {
                     createdAt: createdAt,
                     sourceText: currentSourceText,
                     markdown: currentMarkdown,
-                    audioFileName: Card.sanitizedAudioFileName(currentAudioFileName)
+                    audioFileName: Card.sanitizedAudioFileName(currentAudioFileName),
+                    category: currentCategory
                 ))
             }
             currentID = nil
             currentCreatedAt = nil
             currentAudioFileName = nil
+            currentCategory = ""
         }
         currentElement = nil
         textBuffer = ""

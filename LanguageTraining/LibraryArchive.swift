@@ -64,7 +64,7 @@ enum LibraryArchive {
         }
 
         try validateImportedDataDirectory(resolvedImportedDataDir)
-        let cards = try CardXMLCodec.decode(data: try Data(contentsOf: cardsXMLURL))
+        let cards = try CardXMLCodec.decodeCards(data: try Data(contentsOf: cardsXMLURL))
         try backupCurrentData()
 
         let destinationDir = try AppStorage.dataDirectoryURL()

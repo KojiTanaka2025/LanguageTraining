@@ -126,17 +126,23 @@ Generated cards can include:
 
 Review the generated explanation, then click Save to Library or press `Command + S` on Mac.
 
+Choose a colored tag before saving (defaults include 仕事用 and 日常会話, plus any you add, or 未分類). Use New Tag… in the same menu to create one with a color. The last choice is remembered for the next save.
+
 Turn off Save audio if you do not want to store pronunciation with the card.
 
-Saved cards include the original text, explanation, creation date, and audio when available. If iCloud Drive sharing is set up, the new card appears on the other device after it uploads.
+Saved cards include the original text, explanation, tag, creation date, and audio when available. The tag catalog (names and colors) is stored in `cards.xml` with the cards, so it syncs through iCloud Drive. If iCloud Drive sharing is set up, the new card appears on the other device after it uploads.
 
 ## Review Saved Cards
 
 1. Open the Library tab.
-2. Use search to filter cards.
-3. Open a card to view the full explanation. On Mac, select it in the list. On iPhone, tap the card; the explanation opens on the next screen. The detail view shows the explanation only; the original text appears as the explanation title.
-4. Play saved audio, or generate audio if none is saved. Newly generated library audio is stored on the card.
-5. Copy the source text or delete a card from the context menu. On Mac you can also press Delete after selecting a card. On iPhone you can swipe to delete.
+2. Use the tag menu to show all cards, one tag, or uncategorized cards.
+3. Use search to filter further by text or tag name.
+4. Open a card to view the full explanation. On Mac, select it in the list. On iPhone, tap the card; the explanation opens on the next screen. The detail view shows the explanation only; the original text appears as the explanation title.
+5. Play saved audio, or generate audio if none is saved. Newly generated library audio is stored on the card.
+6. Change the tag from the colored dropdown on each card row, or from the context menu (right-click / long-press). Both menus include New Tag….
+7. Copy the source text or delete a card from the context menu. On Mac you can also press Delete after selecting a card. On iPhone you can swipe to delete.
+
+In Settings, add tags, change their colors, or delete them. Deleting a tag also clears it from cards that used it.
 
 ## Keyboard Shortcuts
 

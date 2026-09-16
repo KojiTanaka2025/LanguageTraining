@@ -22,6 +22,13 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Last tag name chosen when saving a card (empty = uncategorized).
+    @Published var lastSaveCategory: String = LibraryTag.builtInDefaults[0].name {
+        didSet {
+            UserDefaults.standard.set(lastSaveCategory, forKey: "lastSaveCategory")
+        }
+    }
+
     @Published var apiKey: String = "" {
         didSet { apiKeyDirty = true }
     }
@@ -42,6 +49,9 @@ final class AppSettings: ObservableObject {
         }
         if let savedExplanationLanguage = UserDefaults.standard.string(forKey: "explanationLanguage") {
             self.explanationLanguage = savedExplanationLanguage
+        }
+        if let savedLastCategory = UserDefaults.standard.string(forKey: "lastSaveCategory") {
+            self.lastSaveCategory = savedLastCategory
         }
         
         // 初期化時に同期的にKeychainから読み込む
@@ -68,5 +78,6 @@ final class AppSettings: ObservableObject {
         UserDefaults.standard.set(openAIModel, forKey: "openAIModel")
         UserDefaults.standard.set(openAIBaseURL, forKey: "openAIBaseURL")
         UserDefaults.standard.set(explanationLanguage, forKey: "explanationLanguage")
+        UserDefaults.standard.set(lastSaveCategory, forKey: "lastSaveCategory")
     }
 }

@@ -139,7 +139,7 @@ struct DataManager {
         try validateImportedDataDirectory(resolvedImportedDataDir)
 
         let data = try Data(contentsOf: cardsXMLURL)
-        let cards = try CardXMLCodec.decode(data: data)
+        let cards = try CardXMLCodec.decodeCards(data: data)
         
         try await backupCurrentData()
         
@@ -311,7 +311,7 @@ struct DataManager {
         This archive contains the following data:
         
         📁 LanguageTraining/
-        ├── cards.xml          # all learning card data
+        ├── cards.xml          # tag catalog + all learning card data
         └── audio/             # audio files in MP3 format
         
         
