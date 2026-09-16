@@ -55,8 +55,8 @@ final class CardStore: ObservableObject {
         tag(named: name)?.colorHex ?? LibraryTag.defaultColorHex
     }
 
-    func appendCard(sourceText: String, markdown: String, audioFileName: String? = nil, category: String = "") async throws {
-        let card = Card(sourceText: sourceText, markdown: markdown, audioFileName: audioFileName, category: category)
+    func appendCard(sourceText: String, markdown: String, explanation: CardExplanation? = nil, audioFileName: String? = nil, category: String = "") async throws {
+        let card = Card(sourceText: sourceText, markdown: markdown, explanation: explanation, audioFileName: audioFileName, category: category)
         try appendCard(card)
     }
 
