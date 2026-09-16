@@ -23,7 +23,7 @@ struct Card: Identifiable, Hashable, Sendable {
         self.sourceText = sourceText
         self.markdown = markdown
         self.audioFileName = Self.sanitizedAudioFileName(audioFileName)
-        self.category = CardCategory.normalized(category)
+        self.category = LibraryTag.normalizedName(category)
     }
     
     /// 音声ファイルの絶対パスを取得

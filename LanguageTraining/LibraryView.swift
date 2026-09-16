@@ -7,7 +7,9 @@ struct LibraryView: View {
 
     @State private var query: String = ""
     @State private var selected: Card.ID?
-    @State private var categoryFilter: String = CardCategory.allFilterID
+    @State private var categoryFilter: String = LibraryTag.allFilterID
+    @State private var isPresentingNewTag = false
+    @State private var newTagTargetCardID: Card.ID?
     
     @State private var errorMessage: String?
     @State private var cardPendingDeletion: Card?
@@ -33,13 +35,13 @@ struct LibraryView: View {
                         message: loadError,
                         showsRetry: true
                     )
-                } else if filtered.isEmpty && (!query.isEmpty || categoryFilter != CardCategory.allFilterID) {
+                } else if filtered.isEmpty && (!query.isEmpty || categoryFilter != LibraryTag.allFilterID) {
                     emptyState(
                         icon: "magnifyingglass",
                         title: "No results",
-                        message: categoryFilter == CardCategory.allFilterID
+                        message: categoryFilter == LibraryTag.allFilterID
                             ? "Try a different keyword."
-                            : "No cards in “\(CardCategory.displayName(categoryFilter))”."
+                            : "No cards tagged “\(LibraryTag.displayName(categoryFilter))”."
                     )
                 } else if store.cards.isEmpty {
                     emptyState(
@@ -55,15 +57,51 @@ struct LibraryView: View {
             .searchable(text: $query, prompt: "Search cards")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Picker("Category", selection: $categoryFilter) {
-                        Text(CardCategory.allFilterLabel).tag(CardCategory.allFilterID)
-                        ForEach(filterCategoryChoices, id: \.self) { name in
-                            Text(name).tag(name)
+                    Menu {
+                        Button {
+                            categoryFilter = LibraryTag.allFilterID
+                        } label: {
+                            filterMenuLabel(LibraryTag.allFilterLabel, colorHex: nil, selected: categoryFilter == LibraryTag.allFilterID)
                         }
-                        Text(CardCategory.uncategorizedLabel).tag(CardCategory.uncategorizedID)
+                        ForEach(store.tags) { tag in
+                            Button {
+                                categoryFilter = tag.name
+                            } label: {
+                                filterMenuLabel(tag.name, colorHex: tag.colorHex, selected: categoryFilter == tag.name)
+                            }
+                        }
+                        Button {
+                            categoryFilter = LibraryTag.uncategorizedID
+                        } label: {
+                            filterMenuLabel(
+                                LibraryTag.uncategorizedLabel,
+                                colorHex: LibraryTag.defaultColorHex,
+                                selected: categoryFilter == LibraryTag.uncategorizedID
+                            )
+                        }
+                        Divider()
+                        Button("New Tag…") {
+                            newTagTargetCardID = nil
+                            isPresentingNewTag = true
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if categoryFilter == LibraryTag.allFilterID {
+                                Text(LibraryTag.allFilterLabel)
+                            } else {
+                                TagSwatch(
+                                    colorHex: categoryFilter.isEmpty
+                                        ? LibraryTag.defaultColorHex
+                                        : store.colorHex(forCategory: categoryFilter)
+                                )
+                                Text(LibraryTag.displayName(categoryFilter))
+                            }
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    .pickerStyle(.menu)
-                    .help("Show all cards or only one category")
+                    .help("Show all cards or only one tag")
                 }
                 ToolbarItem(placement: .status) {
                     Text(cardCountLabel)
@@ -108,6 +146,22 @@ struct LibraryView: View {
                 .background(.bar)
             }
         }
+        .sheet(isPresented: $isPresentingNewTag) {
+            NewTagSheet(isPresented: $isPresentingNewTag) { name, colorHex in
+                do {
+                    guard try store.addTag(name: name, colorHex: colorHex) != nil else { return false }
+                    if let cardID = newTagTargetCardID,
+                       let card = store.cards.first(where: { $0.id == cardID }) {
+                        setCategory(name, for: card)
+                    }
+                    newTagTargetCardID = nil
+                    return true
+                } catch {
+                    errorMessage = error.localizedDescription
+                    return false
+                }
+            }
+        }
         .alert("Delete this card?", isPresented: Binding(
             get: { cardPendingDeletion != nil },
             set: { if !$0 { cardPendingDeletion = nil } }
@@ -149,7 +203,15 @@ struct LibraryView: View {
                     .navigationTitle("Card")
                     .navigationBarTitleDisplayMode(.inline)
                 } label: {
-                    CardRow(card: card)
+                    CardRow(
+                        card: card,
+                        colorHex: store.colorHex(forCategory: card.category),
+                        onSelectTag: { setCategory($0, for: card) },
+                        onNewTag: {
+                            newTagTargetCardID = card.id
+                            isPresentingNewTag = true
+                        }
+                    )
                 }
                 .contextMenu {
                     Button("Copy Text") {
@@ -193,43 +255,51 @@ struct LibraryView: View {
     private var cardCountLabel: String {
         let total = store.cards.count
         let shown = filtered.count
-        if categoryFilter == CardCategory.allFilterID,
+        if categoryFilter == LibraryTag.allFilterID,
            query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return total == 1 ? "1 card" : "\(total) cards"
         }
         return "\(shown) of \(total)"
     }
 
-    private var filterCategoryChoices: [String] {
-        settings.categoryChoices(usedOnCards: store.cards.map(\.category))
-    }
-
-    private var assignCategoryChoices: [String] {
-        filterCategoryChoices
+    @ViewBuilder
+    private func filterMenuLabel(_ title: String, colorHex: String?, selected: Bool) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            if selected {
+                Image(systemName: "checkmark")
+            } else if let colorHex {
+                TagSwatch(colorHex: colorHex)
+            } else {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+            }
+        }
     }
 
     @ViewBuilder
     private func categoryMenu(for card: Card) -> some View {
-        Menu("Category") {
-            ForEach(assignCategoryChoices, id: \.self) { name in
+        Menu("Tag") {
+            ForEach(store.tags) { tag in
                 Button {
-                    setCategory(name, for: card)
+                    setCategory(tag.name, for: card)
                 } label: {
-                    if card.category == name {
-                        Label(name, systemImage: "checkmark")
-                    } else {
-                        Text(name)
-                    }
+                    filterMenuLabel(tag.name, colorHex: tag.colorHex, selected: card.category == tag.name)
                 }
             }
             Button {
-                setCategory(CardCategory.uncategorizedID, for: card)
+                setCategory(LibraryTag.uncategorizedID, for: card)
             } label: {
-                if card.category.isEmpty {
-                    Label(CardCategory.uncategorizedLabel, systemImage: "checkmark")
-                } else {
-                    Text(CardCategory.uncategorizedLabel)
-                }
+                filterMenuLabel(
+                    LibraryTag.uncategorizedLabel,
+                    colorHex: LibraryTag.defaultColorHex,
+                    selected: card.category.isEmpty
+                )
+            }
+            Divider()
+            Button("New Tag…") {
+                newTagTargetCardID = card.id
+                isPresentingNewTag = true
             }
         }
     }
@@ -237,7 +307,15 @@ struct LibraryView: View {
     private var cardList: some View {
         List(selection: $selected) {
             ForEach(filtered) { card in
-                CardRow(card: card)
+                CardRow(
+                    card: card,
+                    colorHex: store.colorHex(forCategory: card.category),
+                    onSelectTag: { setCategory($0, for: card) },
+                    onNewTag: {
+                        newTagTargetCardID = card.id
+                        isPresentingNewTag = true
+                    }
+                )
                     .tag(card.id)
                     .contextMenu {
                         Button("Copy Text") {
@@ -284,7 +362,7 @@ struct LibraryView: View {
 
     private var filtered: [Card] {
         var cards = store.cards
-        if categoryFilter != CardCategory.allFilterID {
+        if categoryFilter != LibraryTag.allFilterID {
             cards = cards.filter { $0.category == categoryFilter }
         }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -292,17 +370,17 @@ struct LibraryView: View {
         return cards.filter { c in
             c.sourceText.localizedCaseInsensitiveContains(q)
                 || c.markdown.localizedCaseInsensitiveContains(q)
-                || CardCategory.displayName(c.category).localizedCaseInsensitiveContains(q)
+                || LibraryTag.displayName(c.category).localizedCaseInsensitiveContains(q)
         }
     }
 
     private func setCategory(_ category: String, for card: Card) {
         var updated = card
-        updated.category = CardCategory.normalized(category)
+        updated.category = LibraryTag.normalizedName(category)
         do {
             try store.updateCard(updated)
         } catch {
-            errorMessage = "Failed to update the category: \(error.localizedDescription)"
+            errorMessage = "Failed to update the tag: \(error.localizedDescription)"
         }
     }
     
@@ -507,6 +585,10 @@ private struct CardDetailPane: View {
 
 private struct CardRow: View {
     let card: Card
+    let colorHex: String
+    var onSelectTag: ((String) -> Void)?
+    var onNewTag: (() -> Void)?
+    @EnvironmentObject private var store: CardStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -523,9 +605,53 @@ private struct CardRow: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(CardCategory.displayName(card.category))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                #if os(macOS)
+                if let onSelectTag {
+                    Menu {
+                        ForEach(store.tags) { tag in
+                            Button {
+                                onSelectTag(tag.name)
+                            } label: {
+                                Label {
+                                    Text(tag.name)
+                                } icon: {
+                                    if card.category == tag.name {
+                                        Image(systemName: "checkmark")
+                                    } else {
+                                        TagSwatch(colorHex: tag.colorHex)
+                                    }
+                                }
+                            }
+                        }
+                        Button {
+                            onSelectTag(LibraryTag.uncategorizedID)
+                        } label: {
+                            Label {
+                                Text(LibraryTag.uncategorizedLabel)
+                            } icon: {
+                                if card.category.isEmpty {
+                                    Image(systemName: "checkmark")
+                                } else {
+                                    TagSwatch(colorHex: LibraryTag.defaultColorHex)
+                                }
+                            }
+                        }
+                        if let onNewTag {
+                            Divider()
+                            Button("New Tag…", action: onNewTag)
+                        }
+                    } label: {
+                        TagLabel(name: card.category, colorHex: colorHex)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                    .help("Change tag")
+                } else {
+                    TagLabel(name: card.category, colorHex: colorHex)
+                }
+                #else
+                TagLabel(name: card.category, colorHex: colorHex)
+                #endif
                 Text("·")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)

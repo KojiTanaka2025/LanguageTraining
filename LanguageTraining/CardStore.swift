@@ -16,6 +16,7 @@ enum CardStoreError: LocalizedError {
 @MainActor
 final class CardStore: ObservableObject {
     @Published private(set) var cards: [Card] = []
+    @Published private(set) var tags: [LibraryTag] = LibraryTag.builtInDefaults
     @Published var lastLoadedAt: Date? = nil
     @Published private(set) var loadErrorMessage: String? = nil
     @Published private(set) var isUsingiCloud = false
@@ -42,6 +43,16 @@ final class CardStore: ObservableObject {
         }
     }
 
+    func tag(named name: String) -> LibraryTag? {
+        let key = LibraryTag.normalizedName(name)
+        guard !key.isEmpty else { return nil }
+        return tags.first { $0.name == key }
+    }
+
+    func colorHex(forCategory name: String) -> String {
+        tag(named: name)?.colorHex ?? LibraryTag.defaultColorHex
+    }
+
     func appendCard(sourceText: String, markdown: String, audioFileName: String? = nil, category: String = "") async throws {
         let card = Card(sourceText: sourceText, markdown: markdown, audioFileName: audioFileName, category: category)
         try appendCard(card)
@@ -50,6 +61,7 @@ final class CardStore: ObservableObject {
     /// カードをカスタムIDで追加（音声保存時に使用）
     func appendCard(_ card: Card) throws {
         try mutatingWithRollback {
+            ensureTagExistsLocked(named: card.category)
             cards.insert(card, at: 0)
         }
     }
@@ -58,7 +70,43 @@ final class CardStore: ObservableObject {
     func updateCard(_ updatedCard: Card) throws {
         guard let index = cards.firstIndex(where: { $0.id == updatedCard.id }) else { return }
         try mutatingWithRollback {
+            ensureTagExistsLocked(named: updatedCard.category)
             cards[index] = updatedCard
+        }
+    }
+
+    @discardableResult
+    func addTag(name: String, colorHex: String) throws -> LibraryTag? {
+        let trimmed = LibraryTag.normalizedName(name)
+        guard !trimmed.isEmpty else { return nil }
+        if tag(named: trimmed) != nil {
+            return nil
+        }
+        let created = LibraryTag(name: trimmed, colorHex: colorHex)
+        try mutatingWithRollback {
+            tags.append(created)
+        }
+        return created
+    }
+
+    func updateTagColor(name: String, colorHex: String) throws {
+        let trimmed = LibraryTag.normalizedName(name)
+        guard let index = tags.firstIndex(where: { $0.name == trimmed }) else { return }
+        try mutatingWithRollback {
+            tags[index].colorHex = LibraryTag.normalizedColor(colorHex)
+        }
+    }
+
+    func removeTag(name: String, clearFromCards: Bool = true) throws {
+        let trimmed = LibraryTag.normalizedName(name)
+        guard !trimmed.isEmpty else { return }
+        try mutatingWithRollback {
+            tags.removeAll { $0.name == trimmed }
+            if clearFromCards {
+                for index in cards.indices where cards[index].category == trimmed {
+                    cards[index].category = ""
+                }
+            }
         }
     }
 
@@ -106,7 +154,7 @@ final class CardStore: ObservableObject {
         try ensureCanPersist()
         let url = try dataFileURL()
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let data = try CardXMLCodec.encode(cards: cards)
+        let data = try CardXMLCodec.encode(tags: tags, cards: cards)
         lastPersistedData = data
         try CoordinatedFile.writeData(data, to: url)
     }
@@ -135,26 +183,54 @@ final class CardStore: ObservableObject {
 
     private func apply(_ snapshot: LibrarySnapshot) {
         cards = snapshot.cards
+        tags = snapshot.tags
         lastPersistedData = snapshot.persistedData
         lastLoadedAt = Date()
         loadErrorMessage = nil
         canPersist = true
         hasLoaded = true
         isUsingiCloud = snapshot.isUsingiCloud
+
+        // One-time migrate UserDefaults custom categories into the library tag catalog.
+        let extras = (UserDefaults.standard.stringArray(forKey: "customCategories") ?? [])
+            .map(LibraryTag.normalizedName)
+            .filter { !$0.isEmpty }
+            .map { LibraryTag(name: $0, colorHex: LibraryTag.defaultColorHex) }
+        if !extras.isEmpty {
+            let merged = LibraryTag.mergedCatalog(
+                existing: tags,
+                usedNames: cards.map(\.category),
+                extras: extras
+            )
+            if merged != tags {
+                tags = merged
+                try? persist()
+            }
+            UserDefaults.standard.removeObject(forKey: "customCategories")
+        }
     }
 
     private func ensureCanPersist() throws {
         guard canPersist else { throw CardStoreError.persistBlocked }
     }
 
+    private func ensureTagExistsLocked(named name: String) {
+        let trimmed = LibraryTag.normalizedName(name)
+        guard !trimmed.isEmpty else { return }
+        guard !tags.contains(where: { $0.name == trimmed }) else { return }
+        tags.append(LibraryTag(name: trimmed, colorHex: LibraryTag.defaultColorHex))
+    }
+
     private func mutatingWithRollback(_ mutate: () throws -> Void) throws {
         try ensureCanPersist()
-        let previous = cards
+        let previousCards = cards
+        let previousTags = tags
         do {
             try mutate()
             try persist()
         } catch {
-            cards = previous
+            cards = previousCards
+            tags = previousTags
             throw error
         }
     }
@@ -198,6 +274,7 @@ final class CardStore: ObservableObject {
                 return
             }
             cards = snapshot.cards
+            tags = snapshot.tags
             lastPersistedData = snapshot.persistedData
             lastLoadedAt = Date()
             isUsingiCloud = snapshot.isUsingiCloud
@@ -208,6 +285,7 @@ final class CardStore: ObservableObject {
 }
 
 private struct LibrarySnapshot: Sendable {
+    var tags: [LibraryTag]
     var cards: [Card]
     var persistedData: Data?
     var isUsingiCloud: Bool
@@ -217,13 +295,20 @@ private struct LibrarySnapshot: Sendable {
             .appendingPathComponent("cards.xml", isDirectory: false)
         if FileManager.default.fileExists(atPath: url.path) {
             let data = try CoordinatedFile.readData(at: url)
+            let document = try CardXMLCodec.decode(data: data)
             return LibrarySnapshot(
-                cards: try CardXMLCodec.decode(data: data),
+                tags: document.tags,
+                cards: document.cards,
                 persistedData: data,
                 isUsingiCloud: AppStorage.isUsingiCloud
             )
         }
-        return LibrarySnapshot(cards: [], persistedData: nil, isUsingiCloud: AppStorage.isUsingiCloud)
+        return LibrarySnapshot(
+            tags: LibraryTag.builtInDefaults,
+            cards: [],
+            persistedData: nil,
+            isUsingiCloud: AppStorage.isUsingiCloud
+        )
     }
 }
 

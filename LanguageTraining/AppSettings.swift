@@ -22,15 +22,8 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    /// User-defined category names in addition to the built-in presets.
-    @Published var customCategories: [String] = [] {
-        didSet {
-            UserDefaults.standard.set(customCategories, forKey: "customCategories")
-        }
-    }
-
-    /// Last category chosen when saving a card.
-    @Published var lastSaveCategory: String = CardCategory.presets[0] {
+    /// Last tag name chosen when saving a card (empty = uncategorized).
+    @Published var lastSaveCategory: String = LibraryTag.builtInDefaults[0].name {
         didSet {
             UserDefaults.standard.set(lastSaveCategory, forKey: "lastSaveCategory")
         }
@@ -57,11 +50,6 @@ final class AppSettings: ObservableObject {
         if let savedExplanationLanguage = UserDefaults.standard.string(forKey: "explanationLanguage") {
             self.explanationLanguage = savedExplanationLanguage
         }
-        if let savedCustom = UserDefaults.standard.stringArray(forKey: "customCategories") {
-            self.customCategories = savedCustom
-                .map(CardCategory.normalized)
-                .filter { !$0.isEmpty && !CardCategory.presets.contains($0) }
-        }
         if let savedLastCategory = UserDefaults.standard.string(forKey: "lastSaveCategory") {
             self.lastSaveCategory = savedLastCategory
         }
@@ -74,27 +62,6 @@ final class AppSettings: ObservableObject {
             self.loadedAPIKeyFromLegacyService = true
         }
         self.apiKeyDirty = false
-    }
-
-    func categoryChoices(usedOnCards: [String] = []) -> [String] {
-        CardCategory.availableNames(custom: customCategories, usedOnCards: usedOnCards)
-    }
-
-    func addCustomCategory(_ name: String) -> Bool {
-        let trimmed = CardCategory.normalized(name)
-        guard !trimmed.isEmpty else { return false }
-        guard !CardCategory.presets.contains(trimmed) else { return true }
-        guard !customCategories.contains(trimmed) else { return true }
-        customCategories.append(trimmed)
-        return true
-    }
-
-    func removeCustomCategory(_ name: String) {
-        let trimmed = CardCategory.normalized(name)
-        customCategories.removeAll { $0 == trimmed }
-        if lastSaveCategory == trimmed {
-            lastSaveCategory = CardCategory.presets[0]
-        }
     }
 
     func save() throws {
@@ -111,7 +78,6 @@ final class AppSettings: ObservableObject {
         UserDefaults.standard.set(openAIModel, forKey: "openAIModel")
         UserDefaults.standard.set(openAIBaseURL, forKey: "openAIBaseURL")
         UserDefaults.standard.set(explanationLanguage, forKey: "explanationLanguage")
-        UserDefaults.standard.set(customCategories, forKey: "customCategories")
         UserDefaults.standard.set(lastSaveCategory, forKey: "lastSaveCategory")
     }
 }

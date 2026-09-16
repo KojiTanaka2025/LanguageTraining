@@ -21,6 +21,7 @@ struct ExplainView: View {
     @State private var lastGeneratedAudioText: String?
     @State private var saveAudioWithCard = true // 音声をカードに保存するか
     @State private var selectedCategory: String = ""
+    @State private var isPresentingNewTag = false
     
     // 初回起動フラグ
     @State private var hasLoadedOnce = false
@@ -62,10 +63,23 @@ struct ExplainView: View {
                 hasLoadedOnce = true
                 loadClipboardOnly()
                 let last = settings.lastSaveCategory
-                if last.isEmpty || saveCategoryChoices.contains(last) {
+                if last.isEmpty || store.tags.contains(where: { $0.name == last }) {
                     selectedCategory = last
                 } else {
-                    selectedCategory = CardCategory.presets[0]
+                    selectedCategory = LibraryTag.builtInDefaults[0].name
+                }
+            }
+        }
+        .sheet(isPresented: $isPresentingNewTag) {
+            NewTagSheet(isPresented: $isPresentingNewTag) { name, colorHex in
+                do {
+                    guard try store.addTag(name: name, colorHex: colorHex) != nil else { return false }
+                    selectedCategory = name
+                    settings.lastSaveCategory = name
+                    return true
+                } catch {
+                    errorMessage = error.localizedDescription
+                    return false
                 }
             }
         }
@@ -181,14 +195,41 @@ struct ExplainView: View {
                 #endif
                 .help("Save pronunciation audio with this card")
 
-                Picker("Category", selection: $selectedCategory) {
-                    ForEach(saveCategoryChoices, id: \.self) { name in
-                        Text(name).tag(name)
+                Menu {
+                    ForEach(store.tags) { tag in
+                        Button {
+                            selectedCategory = tag.name
+                        } label: {
+                            tagMenuLabel(tag.name, colorHex: tag.colorHex, selected: selectedCategory == tag.name)
+                        }
                     }
-                    Text(CardCategory.uncategorizedLabel).tag(CardCategory.uncategorizedID)
+                    Button {
+                        selectedCategory = LibraryTag.uncategorizedID
+                    } label: {
+                        tagMenuLabel(
+                            LibraryTag.uncategorizedLabel,
+                            colorHex: LibraryTag.defaultColorHex,
+                            selected: selectedCategory.isEmpty
+                        )
+                    }
+                    Divider()
+                    Button("New Tag…") {
+                        isPresentingNewTag = true
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        TagSwatch(
+                            colorHex: selectedCategory.isEmpty
+                                ? LibraryTag.defaultColorHex
+                                : store.colorHex(forCategory: selectedCategory)
+                        )
+                        Text(LibraryTag.displayName(selectedCategory))
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .frame(maxWidth: 180)
-                .help("Library category for this card")
+                .help("Tag saved with this card")
 
                 Button("Save to Library") {
                     Task { await saveCard() }
@@ -232,6 +273,18 @@ struct ExplainView: View {
         }
     }
 
+    private func tagMenuLabel(_ name: String, colorHex: String, selected: Bool) -> some View {
+        Label {
+            Text(name)
+        } icon: {
+            if selected {
+                Image(systemName: "checkmark")
+            } else {
+                TagSwatch(colorHex: colorHex)
+            }
+        }
+    }
+
     private enum NoticeTone {
         case error
         case warning
@@ -254,10 +307,6 @@ struct ExplainView: View {
         )
     }
     
-    private var saveCategoryChoices: [String] {
-        settings.categoryChoices(usedOnCards: store.cards.map(\.category))
-    }
-
     // MARK: - Methods
     
     /// クリップボードのみ読み込む（API呼び出しなし）
@@ -388,7 +437,7 @@ struct ExplainView: View {
         errorMessage = nil
         let source = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
         let md = Card.displayMarkdown(from: markdown)
-        let category = CardCategory.normalized(selectedCategory)
+        let category = LibraryTag.normalizedName(selectedCategory)
         guard !source.isEmpty, !md.isEmpty else { return }
         
         do {

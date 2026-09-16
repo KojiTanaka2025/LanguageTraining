@@ -18,24 +18,25 @@ The Mac target (`LanguageTraining`) and the iPhone target (`LanguageTraining iOS
 - Show an approximate API cost at the end of the explanation, in a currency matching the explanation language
 - Choose the explanation language in Settings
 - Generate pronunciation audio with OpenAI text-to-speech
-- Choose a category when saving (仕事用, 日常会話, custom categories, or 未分類)
-- Save the source text, explanation, category, and audio as a learning card
+- Choose a colored tag when saving (仕事用, 日常会話, custom tags, or 未分類), and add a new tag from the same menu
+- Save the source text, explanation, tag, and audio as a learning card
 - Play or stop audio before saving
 
 ### Library
 
-- Filter cards by category (all, one category, or uncategorized)
-- Search saved cards by text or category name
+- Filter cards by colored tag (all, one tag, or uncategorized)
+- Search saved cards by text or tag name
 - Open card details from the list. On iPhone, tap a card to open the explanation on the next screen
 - Show the explanation only in the detail pane, with the original text as the explanation title so it is not duplicated
 - Replay saved pronunciation audio without calling the API again
 - Generate missing audio and save it to the card
-- Copy source text, change category, or delete a card from the context menu
+- Change a card’s tag from the row dropdown or the context menu; add a new tag from either place
+- Copy source text or delete a card from the context menu
 - Delete a card with the Delete key on Mac, or swipe to delete on iPhone
 
 ### Settings
 
-- Manage custom categories in addition to the built-in 仕事用 and 日常会話
+- Manage library tags: add, pick a color, or delete (tags live in `cards.xml` and sync with the library)
 
 ### Mac layout
 
@@ -87,7 +88,7 @@ LanguageTraining/
 ├── PlatformSupport.swift
 ├── ZipArchive.swift
 ├── Card.swift
-├── CardCategory.swift
+├── LibraryTag.swift
 ├── CardStore.swift
 ├── AppSettings.swift
 ├── AppStorage.swift

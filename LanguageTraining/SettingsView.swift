@@ -18,8 +18,8 @@ struct SettingsView: View {
     @State private var isExportingFile = false
     @State private var isPickingFolder = false
     @State private var exportDocument = ExportedZipDocument(data: Data())
-    @State private var newCategoryName = ""
-    @State private var categoryErrorMessage: String?
+    @State private var isPresentingNewTag = false
+    @State private var tagErrorMessage: String?
 
     private let explanationLanguages = [
         "English",
@@ -101,44 +101,53 @@ struct SettingsView: View {
                 #endif
             }
 
-            Section("Categories") {
-                Text("Built-in and custom categories for Library filtering. Choose a category when saving a card, or change it from the Library context menu.")
+            Section("Tags") {
+                Text("Colored tags are stored in the library (cards.xml) and sync with iCloud Drive. Assign them when saving, from each card’s dropdown, or from the Library context menu.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                ForEach(CardCategory.presets, id: \.self) { name in
-                    LabeledContent(name) {
-                        Text("Built-in")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                ForEach(store.tags) { tag in
+                    HStack(spacing: 10) {
+                        Menu {
+                            ForEach(LibraryTag.palette, id: \.self) { hex in
+                                Button {
+                                    updateTagColor(tag.name, hex)
+                                } label: {
+                                    Label {
+                                        Text(hex)
+                                    } icon: {
+                                        if tag.colorHex == hex {
+                                            Image(systemName: "checkmark")
+                                        } else {
+                                            TagSwatch(colorHex: hex, size: 10)
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            TagSwatch(colorHex: tag.colorHex, size: 14)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .help("Change color")
 
-                ForEach(settings.customCategories, id: \.self) { name in
-                    HStack {
-                        Text(name)
+                        Text(tag.name)
                         Spacer()
                         Button(role: .destructive) {
-                            removeCategory(name)
+                            removeTag(tag.name)
                         } label: {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
-                        .help("Remove this custom category from Settings. Cards keep the label until you change them.")
+                        .help("Remove this tag and clear it from cards")
                     }
                 }
 
-                HStack {
-                    TextField("New category", text: $newCategoryName)
-                        .onSubmit(addCategory)
-                    Button("Add") {
-                        addCategory()
-                    }
-                    .disabled(newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("New Tag…") {
+                    isPresentingNewTag = true
                 }
 
-                if let categoryErrorMessage {
-                    Text(categoryErrorMessage)
+                if let tagErrorMessage {
+                    Text(tagErrorMessage)
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
@@ -241,6 +250,18 @@ struct SettingsView: View {
                 errorMessage = "Export failed: \(error.localizedDescription)"
             }
         }
+        .sheet(isPresented: $isPresentingNewTag) {
+            NewTagSheet(isPresented: $isPresentingNewTag) { name, colorHex in
+                do {
+                    guard try store.addTag(name: name, colorHex: colorHex) != nil else { return false }
+                    tagErrorMessage = nil
+                    return true
+                } catch {
+                    tagErrorMessage = error.localizedDescription
+                    return false
+                }
+            }
+        }
     }
 
     private func saveSettings() {
@@ -259,29 +280,25 @@ struct SettingsView: View {
         }
     }
 
-    private func addCategory() {
-        let trimmed = CardCategory.normalized(newCategoryName)
-        guard !trimmed.isEmpty else {
-            categoryErrorMessage = "Enter a category name."
-            return
+    private func updateTagColor(_ name: String, _ colorHex: String) {
+        do {
+            try store.updateTagColor(name: name, colorHex: colorHex)
+            tagErrorMessage = nil
+        } catch {
+            tagErrorMessage = error.localizedDescription
         }
-        if CardCategory.presets.contains(trimmed) || settings.customCategories.contains(trimmed) {
-            categoryErrorMessage = "“\(trimmed)” already exists."
-            return
-        }
-        guard settings.addCustomCategory(trimmed) else {
-            categoryErrorMessage = "Could not add that category."
-            return
-        }
-        newCategoryName = ""
-        categoryErrorMessage = nil
-        try? settings.save()
     }
 
-    private func removeCategory(_ name: String) {
-        settings.removeCustomCategory(name)
-        categoryErrorMessage = nil
-        try? settings.save()
+    private func removeTag(_ name: String) {
+        do {
+            try store.removeTag(name: name, clearFromCards: true)
+            if settings.lastSaveCategory == name {
+                settings.lastSaveCategory = LibraryTag.builtInDefaults[0].name
+            }
+            tagErrorMessage = nil
+        } catch {
+            tagErrorMessage = error.localizedDescription
+        }
     }
 
     private func exportData() {
