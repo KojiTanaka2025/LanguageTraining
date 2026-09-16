@@ -80,6 +80,19 @@ struct SettingsView: View {
                 LabeledContent("Library") {
                     Text(store.isUsingiCloud ? "iCloud Drive" : "This device only")
                 }
+                #if os(macOS)
+                if let libraryFolderPath {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Folder")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(libraryFolderPath)
+                            .font(.caption)
+                            .textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                #endif
                 Text("On iPhone, tap Choose Folder, then Browse → iCloud Drive → LanguageTraining, and tap Open. You can also select iCloud Drive itself; the app will use a LanguageTraining folder inside it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -90,6 +103,14 @@ struct SettingsView: View {
                 Button("Choose Folder…") {
                     isPickingFolder = true
                 }
+                #if os(macOS)
+                Button {
+                    revealDataFolder()
+                } label: {
+                    Label("Open Library Folder in Finder", systemImage: "folder")
+                }
+                .help("Reveal the folder that stores cards.json and audio")
+                #endif
                 #if os(iOS)
                 if store.isUsingiCloud {
                     Button("Use This Device Only") {
@@ -168,12 +189,6 @@ struct SettingsView: View {
                         Label(isImporting ? "Importing…" : "Import", systemImage: "square.and.arrow.down")
                     }
                     .disabled(isExporting || isImporting)
-
-                    #if os(macOS)
-                    Button(action: revealDataFolder) {
-                        Label("Show in Finder", systemImage: "folder")
-                    }
-                    #endif
                 }
             }
 
@@ -388,11 +403,18 @@ struct SettingsView: View {
     }
 
     #if os(macOS)
+    private var libraryFolderPath: String? {
+        try? AppStorage.dataDirectoryURL().path
+    }
+
     private func revealDataFolder() {
         do {
             try DataManager.revealDataFolder()
+            successMessage = "Opened the library folder in Finder."
+            errorMessage = nil
         } catch {
             errorMessage = "Could not open the folder: \(error.localizedDescription)"
+            successMessage = nil
         }
     }
     #endif

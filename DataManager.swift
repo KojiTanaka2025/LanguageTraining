@@ -261,21 +261,30 @@ struct DataManager {
     
     // MARK: - Finderで表示
     
-    /// データフォルダをFinderで開く
+    /// データフォルダをFinderで開く（可能なら cards.json を選択）
     static func revealDataFolder() throws {
-        let appSupportURL = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
         let dataDir = try AppStorage.dataDirectoryURL()
-        
-        if FileManager.default.fileExists(atPath: dataDir.path) {
-            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: dataDir.path)
+        try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+
+        let jsonURL = LibraryFile.jsonURL(in: dataDir)
+        let xmlURL = LibraryFile.xmlURL(in: dataDir)
+        let migratedURL = dataDir.appendingPathComponent(LibraryFile.xmlMigratedName, isDirectory: false)
+
+        let target: URL
+        if FileManager.default.fileExists(atPath: jsonURL.path) {
+            target = jsonURL
+        } else if FileManager.default.fileExists(atPath: xmlURL.path) {
+            target = xmlURL
+        } else if FileManager.default.fileExists(atPath: migratedURL.path) {
+            target = migratedURL
         } else {
-            // フォルダがない場合は親ディレクトリを開く
-            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: appSupportURL.path)
+            target = dataDir
+        }
+
+        if target.hasDirectoryPath {
+            NSWorkspace.shared.open(target)
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting([target])
         }
     }
     
