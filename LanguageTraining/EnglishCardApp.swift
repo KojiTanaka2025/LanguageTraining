@@ -29,7 +29,11 @@ struct LanguageTrainingApp: App {
             SettingsView()
                 .environmentObject(store)
                 .environmentObject(settings)
+                .frame(minWidth: 480, minHeight: 360)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .defaultSize(width: 580, height: 720)
+        .windowResizability(.contentMinSize)
     }
 }
 

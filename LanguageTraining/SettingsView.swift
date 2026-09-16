@@ -209,8 +209,8 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         #if os(macOS)
-        .frame(minWidth: 520, minHeight: 420)
-        .padding(8)
+        .frame(minWidth: 480, minHeight: 360)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         #endif
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
